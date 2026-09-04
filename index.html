@@ -1,0 +1,2620 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>武器ブランチ タレットホーミング強化 v40</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden;background:#111;color:#fff;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  #wrap{position:relative;width:100%;height:100%;background:#181818}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+  #hud{position:absolute;left:12px;top:10px;right:12px;display:flex;justify-content:space-between;pointer-events:none;font-weight:700;text-shadow:0 2px 4px #000}
+  #leftHud,#rightHud{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .pill{padding:6px 10px;border:1px solid #777;border-radius:999px;background:rgba(0,0,0,.45);font-size:13px}
+  #sanityWrap{position:absolute;left:12px;right:12px;bottom:10px;pointer-events:none}
+  #sanityLabel{display:flex;justify-content:space-between;font-size:12px;font-weight:800;margin-bottom:4px;text-shadow:0 2px 4px #000}
+  #sanityBar{height:12px;border:1px solid #777;background:#222;border-radius:999px;overflow:hidden}
+  #sanityFill{height:100%;width:100%;background:#ddd;transition:width .15s linear}
+  #controls{position:absolute;inset:0;pointer-events:none}
+  .pad{position:absolute;bottom:34px;width:140px;height:140px;pointer-events:auto;touch-action:none}
+  #movePad{left:18px}
+  #actionPad{right:18px}
+  .stickBase{position:absolute;left:10px;top:10px;width:120px;height:120px;border:2px solid #777;border-radius:50%;background:rgba(255,255,255,.05)}
+  .stickKnob{position:absolute;left:45px;top:45px;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.35);border:2px solid #bbb}
+  .actionBtn{position:absolute;width:78px;height:78px;border-radius:50%;border:2px solid #aaa;background:rgba(255,255,255,.12);color:#fff;font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;user-select:none}
+  #dashBtn{right:0;bottom:18px}
+  #levelPanel{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:8}
+  #levelCard{width:min(92vw,420px);background:#1d1d1d;border:1px solid #777;border-radius:18px;padding:18px}
+  #levelCard h2{margin:0 0 12px;font-size:22px}
+  .choice{display:block;width:100%;margin:10px 0;padding:14px 12px;border-radius:12px;border:1px solid #777;background:#2a2a2a;color:#fff;text-align:left;font-size:16px}
+  .choice small{display:block;color:#bbb;margin-top:3px}
+  #hint{position:absolute;left:50%;top:46px;transform:translateX(-50%);font-size:12px;color:#bbb;pointer-events:none;white-space:nowrap}
+
+  #grabOverlay{
+    position:absolute;left:0;right:0;top:0;bottom:36px;display:none;z-index:7;
+    background:rgba(0,0,0,.72);
+    align-items:center;justify-content:center;
+    touch-action:none;user-select:none;
+  }
+  #grabScene{
+    position:relative;
+    height:min(62vh,430px);
+    width:min(72vw,520px);
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    pointer-events:none;
+  }
+  #grabCharacter{
+    height:100%;
+    width:auto;
+    max-width:100%;
+    object-fit:contain;
+    pointer-events:none;
+    user-select:none;
+    -webkit-user-drag:none;
+  }
+  #grabGaugeWrap{
+    position:absolute;
+    left:50%;
+    top:2%;
+    transform:translateX(-50%);
+    width:min(76vw,430px);
+    text-align:center;
+    pointer-events:none;
+  }
+  #grabCount{
+    font-size:15px;
+    font-weight:900;
+    margin-bottom:6px;
+    text-shadow:0 2px 5px #000;
+  }
+  #grabBar{
+    height:18px;
+    background:rgba(15,15,15,.88);
+    border:2px solid #ddd;
+    border-radius:999px;
+    overflow:hidden;
+    box-shadow:0 2px 8px rgba(0,0,0,.5);
+  }
+  #grabFill{
+    height:100%;
+    width:0%;
+    background:#eee;
+  }
+  #grabSanityTxt{
+    margin-top:6px;
+    font-size:12px;
+    font-weight:800;
+    color:#ddd;
+    text-shadow:0 2px 5px #000;
+  }
+  .pulse{animation:pulse .16s ease-out}
+  @keyframes pulse{0%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.035)}100%{transform:translateX(-50%) scale(1)}}
+
+  #gameOverOverlay{
+    position:absolute;inset:0;display:none;z-index:20;
+    background:rgba(0,0,0,.82);
+    align-items:center;justify-content:center;text-align:center;
+    touch-action:none;
+  }
+  #gameOverCard{
+    width:min(86vw,340px);
+    padding:24px 20px;
+    border:2px solid #bbb;
+    border-radius:18px;
+    background:#171717;
+  }
+  #gameOverTitle{font-size:36px;font-weight:950;letter-spacing:.08em;margin-bottom:10px}
+  #gameOverSub{font-size:14px;color:#ccc;margin-bottom:16px}
+  #restartBtn{
+    width:100%;min-height:48px;border-radius:12px;border:1px solid #888;
+    background:#2b2b2b;color:#fff;font-size:17px;font-weight:800;
+  }
+
+  /* スマホ横持ち専用UI */
+  body{overscroll-behavior:none}
+  #rotateOverlay{
+    position:fixed;inset:0;z-index:100;display:none;
+    align-items:center;justify-content:center;text-align:center;
+    background:#111;color:#fff;padding:24px;
+  }
+  #rotateCard{
+    max-width:320px;padding:24px 20px;border:1px solid #777;
+    border-radius:18px;background:#1b1b1b;font-weight:800;
+  }
+  #rotateIcon{font-size:48px;margin-bottom:10px}
+  #rotateText{font-size:18px;line-height:1.5}
+  @media (orientation:landscape){
+    #hud{
+      left:max(12px,env(safe-area-inset-left));
+      right:max(12px,env(safe-area-inset-right));
+      top:max(8px,env(safe-area-inset-top));
+    }
+    #movePad{
+      left:max(18px,calc(env(safe-area-inset-left) + 10px));
+      bottom:max(34px,calc(env(safe-area-inset-bottom) + 24px));
+    }
+    #actionPad{
+      right:max(18px,calc(env(safe-area-inset-right) + 10px));
+      bottom:max(34px,calc(env(safe-area-inset-bottom) + 24px));
+    }
+    #sanityWrap{
+      left:max(12px,env(safe-area-inset-left));
+      right:max(12px,env(safe-area-inset-right));
+      bottom:max(8px,env(safe-area-inset-bottom));
+    }
+    #hint{top:max(46px,calc(env(safe-area-inset-top) + 42px))}
+    #levelCard{
+      width:min(72vw,560px);
+      max-height:88vh;
+      overflow:auto;
+      padding:14px 16px;
+    }
+    #levelCard h2{font-size:20px;margin-bottom:8px}
+    .choice{margin:7px 0;padding:10px 11px;font-size:15px}
+  }
+  @media (orientation:portrait){
+    #rotateOverlay{display:flex}
+    #wrap{visibility:hidden}
+  }
+
+  #characterPortrait{
+    position:absolute;
+    right:max(8px,env(safe-area-inset-right));
+    bottom:max(32px,calc(env(safe-area-inset-bottom) + 24px));
+    height:min(68vh,520px);
+    width:auto;
+    z-index:3;
+    pointer-events:none;
+    user-select:none;
+    -webkit-user-drag:none;
+  }
+  @media (orientation:portrait){#characterPortrait{display:none}}
+
+
+  #weaponSwapOverlay{
+    position:absolute;inset:0;z-index:30;display:none;
+    align-items:center;justify-content:center;
+    background:rgba(0,0,0,.65);pointer-events:auto;
+  }
+  #weaponSwapCard{
+    width:min(430px,calc(100vw - 36px));
+    padding:22px 18px 18px;border:2px solid #fff;border-radius:14px;
+    background:rgba(20,24,34,.97);text-align:center;
+    box-shadow:0 8px 30px rgba(0,0,0,.45);
+  }
+  #weaponSwapTitle{font-size:22px;font-weight:900;margin-bottom:10px}
+  #weaponSwapDesc{font-size:15px;margin-bottom:18px;color:#ddd}
+  #weaponSwapButtons{display:flex;gap:12px}
+  .weaponSwapBtn{
+    flex:1;height:52px;border:0;border-radius:10px;color:#fff;
+    font-size:17px;font-weight:900;touch-action:manipulation;
+  }
+  #weaponSwapYes{background:#2563eb}
+  #weaponSwapNo{background:#4b5563}
+</style>
+</head>
+<body><div id="buildHud" style="position:fixed;right:max(8px,env(safe-area-inset-right));top:max(8px,env(safe-area-inset-top));z-index:9999;padding:6px 9px;border-radius:10px;background:#111b;color:#fff;font:600 10px sans-serif;pointer-events:none">射程 0 ｜ 威力 0 ｜ 連射 0 ｜ クリティカル 20%</div>
+<div id="skillTestSceneBadge" style="position:fixed;left:50%;top:max(6px,env(safe-area-inset-top));transform:translateX(-50%);z-index:9999;padding:4px 10px;border-radius:10px;background:#111b;color:#fff;font:700 12px sans-serif;pointer-events:none">スキルテスト</div>
+<div id="weaponSwapOverlay">
+  <div id="weaponSwapCard">
+    <div id="weaponSwapTitle">武器を入れ替えますか？</div>
+    <div id="weaponSwapDesc"></div>
+    <div id="weaponSwapButtons">
+      <button id="weaponSwapYes" class="weaponSwapBtn">入れ替える</button>
+      <button id="weaponSwapNo" class="weaponSwapBtn">入れ替えない</button>
+    </div>
+  </div>
+</div>
+<div id="rotateOverlay">
+  <div id="rotateCard">
+    <div id="rotateIcon">↻</div>
+    <div id="rotateText">スマホを横向きにしてプレイしてください</div>
+  </div>
+</div>
+<div id="wrap">
+  <canvas id="game"></canvas>
+<div id="hud">
+    <div id="leftHud">
+      <div class="pill">EXP <span id="xpTxt">0/100</span></div>
+      <div class="pill">LV <span id="lvTxt">1</span></div>
+      
+      <div class="pill">KILL <span id="killTxt">0</span></div>
+    </div>
+    <div id="rightHud">
+      <div class="pill">WAVE <span id="waveTxt">1</span></div>
+      <div class="pill">敵 <span id="enemyTxt">0</span></div>
+    </div>
+  </div>
+
+  <div id="hint">田の字ステージ / S:スライム T:触手 G:ゴブリン W:ウルフ H:ハーピー</div>
+  <div id="sanityWrap">
+    <div id="sanityLabel"><span>理性</span><span id="sanityTxt">100/100</span></div>
+    <div id="sanityBar"><div id="sanityFill"></div></div>
+  </div>
+
+  <div id="controls">
+    <div id="movePad" class="pad">
+      <div class="stickBase"></div>
+      <div id="moveKnob" class="stickKnob"></div>
+    </div>
+    <div id="actionPad" class="pad">
+      <div id="dashBtn" class="actionBtn">DASH</div>
+    </div>
+  </div>
+
+  <div id="grabOverlay">
+    <div id="grabScene">
+<div id="grabGaugeWrap">
+        <div id="grabCount">0%</div>
+        <div id="grabBar"><div id="grabFill"></div></div>
+        <div id="grabSanityTxt">理性 100/100</div>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="gameOverOverlay">
+    <div id="gameOverCard">
+      <div id="gameOverTitle">GAME OVER</div>
+      <div id="gameOverSub">理性が尽きたまま拘束された</div>
+      <button id="restartBtn" type="button">RESTART</button>
+    </div>
+  </div>
+
+  <div id="levelPanel">
+    <div id="levelCard">
+      <h2>LEVEL UP</h2>
+      <button class="choice"></button>
+      <button class="choice"></button>
+      <button class="choice"></button>
+      <button class="choice"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+
+  // 対応ブラウザでは最初の操作時に横画面固定を試みる。
+  let landscapeLockTried=false;
+  async function tryLandscapeLock(){
+    if(landscapeLockTried)return;
+    landscapeLockTried=true;
+    try{
+      if(screen.orientation && screen.orientation.lock){
+        await screen.orientation.lock('landscape');
+      }
+    }catch(_){}
+  }
+  document.addEventListener('pointerdown',tryLandscapeLock,{once:true});
+
+  const weaponSwapOverlay=document.getElementById('weaponSwapOverlay');
+  const weaponSwapDesc=document.getElementById('weaponSwapDesc');
+  const weaponSwapYes=document.getElementById('weaponSwapYes');
+  const weaponSwapNo=document.getElementById('weaponSwapNo');
+  const xpTxt = document.getElementById('xpTxt');
+  const lvTxt = document.getElementById('lvTxt');
+  const atkTxt = document.getElementById('atkTxt');
+  const killTxt = document.getElementById('killTxt');
+  const waveTxt = document.getElementById('waveTxt');
+  const enemyTxt = document.getElementById('enemyTxt');
+  const sanityFill = document.getElementById('sanityFill');
+  const sanityTxt = document.getElementById('sanityTxt');
+  const levelPanel = document.getElementById('levelPanel');
+  const explosiveUpgradeChoice = document.getElementById('explosiveUpgradeChoice');
+  const explosiveUpgradeText = document.getElementById('explosiveUpgradeText');
+  const grabOverlay = document.getElementById('grabOverlay');
+  const grabGaugeWrap = document.getElementById('grabGaugeWrap');
+  const grabFill = document.getElementById('grabFill');
+  const grabCount = document.getElementById('grabCount');
+  const grabSanityTxt = document.getElementById('grabSanityTxt');
+  const controls = document.getElementById('controls');
+  const gameOverOverlay = document.getElementById('gameOverOverlay');
+  const restartBtn = document.getElementById('restartBtn');
+
+  let W=0,H=0,dpr=1,last=0;
+  const world={w:2200,h:1400,margin:140};
+
+  // 田の字ステージ：中央に十字の壁を置き、中央付近に通路を残す。
+  const wallT=72;
+  const gate=210;
+  const cx=world.w*.5, cy=world.h*.5;
+  const obstacles=[
+    // 縦線（中央ゲートで分割）
+    {x:cx-wallT*.5,y:world.margin,w:wallT,h:cy-gate-world.margin},
+    {x:cx-wallT*.5,y:cy+gate,w:wallT,h:world.h-world.margin-(cy+gate)},
+    // 横線（中央ゲートで分割）
+    {x:world.margin,y:cy-wallT*.5,w:cx-gate-world.margin,h:wallT},
+    {x:cx+gate,y:cy-wallT*.5,w:world.w-world.margin-(cx+gate),h:wallT}
+  ];
+
+  function circleHitsRect(x,y,r,o){
+    const nx=Math.max(o.x,Math.min(x,o.x+o.w));
+    const ny=Math.max(o.y,Math.min(y,o.y+o.h));
+    const dx=x-nx,dy=y-ny;
+    return dx*dx+dy*dy<r*r;
+  }
+
+  function hitsObstacle(x,y,r){
+    return obstacles.some(o=>circleHitsRect(x,y,r,o));
+  }
+
+  // プレイヤーは壁に沿って滑る。
+  function movePlayerWithWalls(dx,dy){
+    const nx=Math.max(world.margin,Math.min(world.w-world.margin,player.x+dx));
+    if(!hitsObstacle(nx,player.y,player.r)) player.x=nx;
+    const ny=Math.max(world.margin,Math.min(world.h-world.margin,player.y+dy));
+    if(!hitsObstacle(player.x,ny,player.r)) player.y=ny;
+  }
+
+  function moveEnemyStraight(e,vx,vy,dt){
+    const nx=e.x+vx*dt, ny=e.y+vy*dt;
+    if(
+      nx>world.margin && nx<world.w-world.margin &&
+      ny>world.margin && ny<world.h-world.margin &&
+      !hitsObstacle(nx,ny,e.r)
+    ){
+      e.x=nx;e.y=ny;
+      return true;
+    }
+    return false;
+  }
+
+  // ハーピーだけは進路上に壁があると左右へ回り込む。
+  function moveHarpyAvoid(e,vx,vy,dt){
+    if(moveEnemyStraight(e,vx,vy,dt))return;
+    const sp=Math.hypot(vx,vy)||1;
+    const ux=vx/sp,uy=vy/sp;
+    const dirs=[
+      {x:-uy*sp,y:ux*sp},
+      {x:uy*sp,y:-ux*sp},
+      {x:(ux*.55-uy*.83)*sp,y:(uy*.55+ux*.83)*sp},
+      {x:(ux*.55+uy*.83)*sp,y:(uy*.55-ux*.83)*sp}
+    ];
+    // 壁から離れやすい方向を先に試す
+    for(const d of dirs){
+      if(moveEnemyStraight(e,d.x,d.y,dt))return;
+    }
+  }
+
+
+  // 直線上に障害物があるかを簡易サンプリングで確認
+  function lineBlocked(x1,y1,x2,y2,r){
+    const dx=x2-x1,dy=y2-y1;
+    const len=Math.hypot(dx,dy)||1;
+    const steps=Math.max(2,Math.ceil(len/28));
+    for(let i=1;i<steps;i++){
+      const t=i/steps;
+      if(hitsObstacle(x1+dx*t,y1+dy*t,r)) return true;
+    }
+    return false;
+  }
+
+  // 田の字の壁の端を経由候補として使う。
+  function navigationPointsFor(e){
+    const pad=e.r+34;
+    const pts=[];
+
+    for(const o of obstacles){
+      pts.push(
+        {x:o.x-pad,     y:o.y-pad},
+        {x:o.x+o.w+pad, y:o.y-pad},
+        {x:o.x-pad,     y:o.y+o.h+pad},
+        {x:o.x+o.w+pad, y:o.y+o.h+pad}
+      );
+    }
+
+    // 中央の開口部周辺も候補にする
+    pts.push(
+      {x:cx-gate-50,y:cy-gate-50},
+      {x:cx+gate+50,y:cy-gate-50},
+      {x:cx-gate-50,y:cy+gate+50},
+      {x:cx+gate+50,y:cy+gate+50}
+    );
+
+    return pts.filter(p=>
+      p.x>world.margin && p.x<world.w-world.margin &&
+      p.y>world.margin && p.y<world.h-world.margin &&
+      !hitsObstacle(p.x,p.y,e.r)
+    );
+  }
+
+  // プレイヤーが直接見えるなら直進。
+  // 壁に遮られている場合は、プレイヤーまでの総距離が短くなる
+  // 「見える角」を一つ選んで回り込む。
+  function moveEnemyPathfind(e,dt){
+    if(!lineBlocked(e.x,e.y,player.x,player.y,e.r+3)){
+      const dx=player.x-e.x,dy=player.y-e.y;
+      const d=Math.hypot(dx,dy)||1;
+      moveEnemyStraight(e,dx/d*e.speed,dy/d*e.speed,dt);
+      e.navTarget=null;
+      return;
+    }
+
+    let target=e.navTarget;
+
+    // 既存の中継点が見えなくなった/到着したら選び直す
+    if(
+      !target ||
+      Math.hypot(target.x-e.x,target.y-e.y)<30 ||
+      lineBlocked(e.x,e.y,target.x,target.y,e.r+3)
+    ){
+      target=null;
+      let bestScore=Infinity;
+
+      for(const p of navigationPointsFor(e)){
+        if(lineBlocked(e.x,e.y,p.x,p.y,e.r+3)) continue;
+
+        // 現在地→中継点→プレイヤー の距離を基本評価。
+        // 中継点からプレイヤーが直接見える場所を優先。
+        const a=Math.hypot(p.x-e.x,p.y-e.y);
+        const b=Math.hypot(player.x-p.x,player.y-p.y);
+        const secondBlocked=lineBlocked(p.x,p.y,player.x,player.y,e.r+3);
+        const score=a+b+(secondBlocked?260:0);
+
+        if(score<bestScore){
+          bestScore=score;
+          target=p;
+        }
+      }
+      e.navTarget=target;
+    }
+
+    if(target){
+      const dx=target.x-e.x,dy=target.y-e.y;
+      const d=Math.hypot(dx,dy)||1;
+      if(!moveEnemyStraight(e,dx/d*e.speed,dy/d*e.speed,dt)){
+        e.navTarget=null;
+      }
+    }else{
+      // 念のためのフォールバック：壁沿いに滑らせる
+      const dx=player.x-e.x,dy=player.y-e.y;
+      const d=Math.hypot(dx,dy)||1;
+      moveHarpyAvoid(e,dx/d*e.speed,dy/d*e.speed,dt);
+    }
+  }
+
+  function moveGhost(e,dt){
+    const dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy)||1;
+    e.x=Math.max(world.margin,Math.min(world.w-world.margin,e.x+dx/d*e.speed*dt));
+    e.y=Math.max(world.margin,Math.min(world.h-world.margin,e.y+dy/d*e.speed*dt));
+  }
+
+  function pointInFrontBox(px,py,e,length,width){
+    const dx=px-e.x,dy=py-e.y;
+    const f=dx*e.attackDirX+dy*e.attackDirY;
+    const s=Math.abs(dx*(-e.attackDirY)+dy*e.attackDirX);
+    return f>=0 && f<=length && s<=width*.5;
+  }
+
+  const camera={x:0,y:0};
+  function resize(){
+    dpr = Math.min(devicePixelRatio || 1, 2);
+    W = innerWidth; H = innerHeight;
+    canvas.width = Math.floor(W*dpr);
+    canvas.height = Math.floor(H*dpr);
+    canvas.style.width = W+'px';
+    canvas.style.height = H+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  addEventListener('resize', resize);
+  resize();
+
+  const player = {
+    x:world.w*.5,y:world.h*.5,r:15,
+    sanity:100,maxSanity:100,
+    atk:13,
+    speed:220,
+    level:1,xp:0,xpNeed:34,
+    fireInterval:1.0,fireCd:.2,explosiveCd:-1,
+    rangeLevel:0,powerLevel:0,rateLevel:0,critLevel:0,shotCount:1,
+    weaponPierceLevel:0,
+    weaponSpreadLevel:0,
+    weaponExplosiveLevel:0,
+    activeWeapon:'none',
+    pendingWeaponPickup:null,
+    weaponSwapConfirm:false,
+    dashCd:0,dashTime:0,invuln:0,
+    facingX:1,facingY:0,
+    aimX:1,aimY:0,
+    kills:0,
+    grabbed:false,
+    grabProgress:0,
+    grabTapPower:9,
+    grabEnemy:null,
+    grabSanityDrain:5,
+
+    // レアスキル：爆発弾
+    explosiveOwned:false,
+    explosiveLevel:0,
+    explosiveBaseDamage:13*1.5,
+
+    // 4スキル統合検証
+    shockwaveLevel:0,
+    shockwaveCd:0,
+    boomerangLevel:0,
+    boomerangCd:0,
+    turretLevel:0,
+    turretSpawnCd:0,
+    lightningLevel:0,
+    lightningCd:0,
+    genesisLevel:0,
+    genesisCd:0,
+    normalVolleyCount:0
+  };
+
+  let enemies=[];
+  let projectiles=[];
+  let pickups=[];
+  let skillFx=[];
+  let turrets=[];
+  let lightningFx=[];
+  let genesisFx=[];
+  let damageTexts=[];
+  let wave=1;
+  let spawnTimer=0;
+  let weaponDropKillCount=0;
+  let pausedForLevel=false;
+  let gameOver=false;
+
+  function rand(a,b){return a+Math.random()*(b-a)}
+
+  function spawnSanityPickup(x,y){
+    pickups.push({
+      type:'sanity',
+      x,y,
+      r:9,
+      heal:18,
+      life:12,
+      bob:Math.random()*Math.PI*2
+    });
+  }
+
+  function spawnXpDrops(x,y){
+    const count = Math.random()<0.5 ? 2 : 3;
+    for(let i=0;i<count;i++){
+      const a=Math.random()*Math.PI*2;
+      const d=14+Math.random()*24;
+      pickups.push({
+        type:'xp',
+        x:x+Math.cos(a)*d,
+        y:y+Math.sin(a)*d,
+        r:6,
+        xp:10,
+        life:20,
+        bob:Math.random()*Math.PI*2
+      });
+    }
+  }
+
+  function spawnGuaranteedRandomWeapon(x,y){
+    const roll=Math.floor(Math.random()*3);
+    const type=roll===0?'weapon_pierce':roll===1?'weapon_spread':'weapon_explosive';
+    pickups.push({
+      type,
+      x,y,
+      r:11,
+      life:30,
+      bob:Math.random()*Math.PI*2
+    });
+  }
+
+  function equipWeapon(kind){
+    if(kind==='pierce'){
+      if(player.activeWeapon==='pierce') player.weaponPierceLevel=Math.min(3,player.weaponPierceLevel+1);
+      else { player.activeWeapon='pierce'; player.weaponPierceLevel=1; }
+      return;
+    }
+    if(kind==='spread'){
+      if(player.activeWeapon==='spread') player.weaponSpreadLevel=Math.min(3,player.weaponSpreadLevel+1);
+      else { player.activeWeapon='spread'; player.weaponSpreadLevel=1; }
+      return;
+    }
+    if(kind==='explosive'){
+      if(player.activeWeapon==='explosive') player.weaponExplosiveLevel=Math.min(3,player.weaponExplosiveLevel+1);
+      else { player.activeWeapon='explosive'; player.weaponExplosiveLevel=1; }
+      return;
+    }
+    // 爆発弾も今後ここへ追加し、activeWeaponで必ず排他管理する。
+  }
+
+  function weaponDisplayName(kind){
+    if(kind==='pierce')return 'ロッド';
+    if(kind==='spread')return 'ワンド';
+    if(kind==='explosive')return '魔導書';
+    return '武器';
+  }
+
+  function requestWeaponPickup(kind,pickupIndex){
+    if(player.activeWeapon==='none'){
+      equipWeapon(kind);
+      pickups.splice(pickupIndex,1);
+      return;
+    }
+    if(player.activeWeapon===kind){
+      equipWeapon(kind);
+      pickups.splice(pickupIndex,1);
+      return;
+    }
+
+    player.pendingWeaponPickup={kind,pickupIndex};
+    player.weaponSwapConfirm=true;
+    weaponSwapDesc.textContent=`${weaponDisplayName(player.activeWeapon)} → ${weaponDisplayName(kind)}`;
+    weaponSwapOverlay.style.display='flex';
+  }
+
+  function resolveWeaponSwap(doSwap){
+    const pending=player.pendingWeaponPickup;
+    if(!pending)return;
+
+    const expectedType=pending.kind==='pierce'?'weapon_pierce'
+      :pending.kind==='spread'?'weapon_spread'
+      :pending.kind==='explosive'?'weapon_explosive'
+      :null;
+
+    let idx=pending.pickupIndex;
+    if(!(idx>=0&&idx<pickups.length&&pickups[idx].type===expectedType)){
+      idx=pickups.findIndex(p=>p.type===expectedType);
+    }
+
+    if(doSwap) equipWeapon(pending.kind);
+
+    // どちらを選んでも、拾った新しい武器は消える
+    if(idx>=0)pickups.splice(idx,1);
+
+    player.pendingWeaponPickup=null;
+    player.weaponSwapConfirm=false;
+    weaponSwapOverlay.style.display='none';
+  }
+
+  weaponSwapYes.addEventListener('pointerdown',e=>{
+    e.preventDefault();e.stopPropagation();resolveWeaponSwap(true);
+  });
+  weaponSwapNo.addEventListener('pointerdown',e=>{
+    e.preventDefault();e.stopPropagation();resolveWeaponSwap(false);
+  });
+
+  function maybeSpawnExplosiveWeapon(x,y){
+    if(player.activeWeapon!=='none' && player.activeWeapon!=='explosive')return;
+    if(player.weaponExplosiveLevel>=3)return;
+    if(Math.random()<0.10){
+      pickups.push({
+        type:'weapon_explosive',
+        x,y,
+        r:11,
+        life:30,
+        bob:Math.random()*Math.PI*2
+      });
+    }
+  }
+
+  function maybeSpawnSpreadWeapon(x,y){
+    if(player.activeWeapon!=='none' && player.activeWeapon!=='spread')return;
+    if(player.weaponSpreadLevel>=3)return;
+    if(Math.random()<0.10){
+      pickups.push({
+        type:'weapon_spread', x, y, r:11, life:30,
+        bob:Math.random()*Math.PI*2
+      });
+    }
+  }
+
+  function maybeSpawnPierceWeapon(x,y){
+    if(player.activeWeapon!=='none' && player.activeWeapon!=='pierce')return;
+    // 武器ブランチ検証用：敵撃破時10%で青い星をドロップ。
+    // Lv3到達後は新たにドロップしない。
+    if(player.weaponPierceLevel>=3)return;
+    if(Math.random()<0.10){
+      pickups.push({
+        type:'weapon_pierce',
+        x,y,
+        r:11,
+        life:30,
+        bob:Math.random()*Math.PI*2
+      });
+    }
+  }
+
+  function maybeSpawnExplosiveSkill(x,y){
+    // 4スキル統合検証では旧爆発弾スキルのドロップを停止
+    return;
+    // 未取得時のみ低確率で出現。取得後は二度とドロップしない。
+    if(player.explosiveOwned)return;
+    if(pickups.some(p=>p.type==='skill_explosive'))return;
+
+    if(Math.random()<0.025){
+      pickups.push({
+        type:'skill_explosive',
+        x,y,
+        r:11,
+        life:30,
+        bob:Math.random()*Math.PI*2
+      });
+    }
+  }
+
+  function explosiveDamage(){
+    // Lv1で初期通常弾(13)の150%。以後Lvごとに約25%ずつ強化。
+    return player.explosiveBaseDamage * (1 + (player.explosiveLevel-1)*0.25);
+  }
+
+  function explosiveRadius(){
+    // Lv1=62px、Lv5=126px
+    return 62 + (player.explosiveLevel-1)*16;
+  }
+
+
+
+  // ===== スキルブランチ：衝撃波 =====
+  // Lv1→Lv5で範囲・ダメージともに上昇。
+  // Lv1は控えめ、育つほど存在感が増す検証用設定。
+  function shockwaveRadius(){
+    const lv=player.shockwaveLevel;
+    if(lv<=0)return 0;
+    // 強化はCT短縮と範囲拡大を交互にする。
+    // Lv1=105, Lv2=105, Lv3=142.5, Lv4=142.5, Lv5=180
+    const table=[0,105,105,142.5,142.5,180];
+    return table[lv] ?? 180;
+  }
+
+  function shockwaveCooldown(){
+    const lv=player.shockwaveLevel;
+    if(lv<=0)return 2.0;
+    // Lv2とLv4でそれぞれCT -0.5秒
+    const table=[2.0,2.0,1.50,1.50,1.00,1.00];
+    return table[lv] ?? 1.50;
+  }
+
+  function shockwaveDamage(){
+    const lv=player.shockwaveLevel;
+    if(lv<=0)return 0;
+    return 13 * (0.50 + (lv-1)*0.25); // 初期攻撃力13を固定基準
+  }
+
+  function triggerShockwave(){
+    if(player.shockwaveLevel<=0)return;
+    const radius=shockwaveRadius();
+    const damage=shockwaveDamage();
+
+    for(let i=enemies.length-1;i>=0;i--){
+      const e=enemies[i];
+      if(Math.hypot(e.x-player.x,e.y-player.y)<=radius+e.r){
+        e.hp-=damage;
+        showDamageText(e.x,e.y-e.r-8,damage);
+        if(e.hp<=0)killEnemyAt(i,e);
+      }
+    }
+
+    skillFx.push({
+      type:'shockwave',
+      x:player.x,y:player.y,
+      r:radius,
+      life:.28,maxLife:.28
+    });
+  }
+
+  function onNormalVolley(){
+    // スキル発動は通常攻撃から独立
+    player.normalVolleyCount++;
+  }
+
+
+  // ===== ブーメラン =====
+  function boomerangDamage(){
+    const lv=player.boomerangLevel;
+    if(lv<=0)return (0)*0.75;
+    // 通常弾強化とは独立。初期攻撃力13を固定基準にする。
+    return 13*(1.15+(lv-1)*0.20)*2/9*1.5;
+  }
+
+  function triggerBoomerang(){
+    if(player.boomerangLevel<=0)return;
+    const target=nearestEnemy();
+    const dx=target?target.x-player.x:player.facingX;
+    const dy=target?target.y-player.y:player.facingY;
+    const len=Math.hypot(dx,dy)||1;
+    const speed=300;
+
+    projectiles.push({
+      kind:'boomerang',
+      x:player.x,y:player.y,
+      vx:dx/len*speed,vy:dy/len*speed,
+      speed,turn:0,
+      r:player.boomerangLevel>=5?24:player.boomerangLevel>=3?18:12,
+      life:8,
+      damage:boomerangDamage(),
+      traveled:0,
+      maxRange:Math.max(180,W*.30),
+      returning:false,
+      hitSet:new Set(),
+      rotationHitTimer:0
+    });
+  }
+
+  // ===== タレット =====
+  function turretLife(){
+    const table=[0,6.0,6.75,7.5,8.25,9.0];
+    return table[player.turretLevel] ?? 0;
+  }
+
+  function turretCooldown(){
+    const table=[999,6.0,5.25,4.5,3.75,3.0];
+    return table[player.turretLevel] ?? 999;
+  }
+
+  function spawnTurret(){
+    if(player.turretLevel<=0)return;
+
+    if(player.turretLevel>=5 && turrets.length>=3){
+      turrets.shift();
+    }
+
+    turrets.push({
+      x:player.x,y:player.y,
+      life:turretLife(),
+      maxLife:turretLife(),
+      fireCd:.1,
+      burstShotsLeft:4,
+      burstInterval:.125,
+      burstPause:1.50
+    });
+  }
+
+  function fireTurret(t){
+    // プレイヤーの「初期射程」を基準に200%。
+    // プレイヤーの射程強化/弱体化には影響されない固定射程。
+    const turretRange=(Math.max(90,W/3)*0.80)*2.00;
+    const turretRangeSq=turretRange*turretRange;
+
+    let target=null,best=Infinity;
+    for(const e of enemies){
+      const d=(e.x-t.x)*(e.x-t.x)+(e.y-t.y)*(e.y-t.y);
+      if(d<=turretRangeSq && d<best){best=d;target=e;}
+    }
+    if(!target)return;
+
+    const dx=target.x-t.x,dy=target.y-t.y;
+    const len=Math.hypot(dx,dy)||1;
+    const speed=420;
+
+    projectiles.push({
+      kind:'turret',
+      x:t.x,y:t.y,
+      vx:dx/len*speed,vy:dy/len*speed,
+      speed,turn:1.50,r:5,life:2.5,
+      damage:3.25,
+      target,
+      traveled:0,
+      maxRange:turretRange
+    });
+  }
+
+  // ===== 落雷 =====
+  function lightningDamage(){
+    // Lv1=150%, Lv2=175%, Lv3=200%, Lv4=225%, Lv5=250%
+    return 13 * (1.25 + player.lightningLevel * .25);
+  }
+
+  function castLightning(){
+    if(player.lightningLevel<=0)return;
+
+    const visible=enemies.filter(e=>{
+      const sx=e.x-camera.x, sy=e.y-camera.y;
+      return e.hp>0 &&
+             sx>=-e.r && sx<=W+e.r &&
+             sy>=-e.r && sy<=H+e.r;
+    });
+
+    for(let i=visible.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [visible[i],visible[j]]=[visible[j],visible[i]];
+    }
+
+    const targets=visible.slice(0,Math.min(player.lightningLevel,visible.length));
+    const dmg=lightningDamage();
+
+    for(const e of targets){
+      e.hp-=dmg;
+      showDamageText(e.x,e.y-e.r-8,dmg);
+      lightningFx.push({x:e.x,y:e.y,life:.32,maxLife:.32});
+
+      if(e.hp<=0){
+        const idx=enemies.indexOf(e);
+        if(idx>=0)killEnemyAt(idx,e);
+      }
+    }
+  }
+
+
+  function showDamageText(x,y,damage,critical=false){
+    damageTexts.push({
+      sx:x-camera.x + (Math.random()-.5)*10,
+      sy:y-camera.y,
+      text:String(Math.round(damage*10)/10).replace(/\.0$/,''),
+      critical,
+      life:1.00,
+      maxLife:1.00
+    });
+  }
+
+  // ===== ジェネシス =====
+  function genesisDamage(){
+    // Lv1-5 = 400 / 600 / 800 / 1000 / 1300%
+    // 通常弾強化とは独立、初期攻撃力13固定基準。
+    const table=[0,400,600,800,1000,1300];
+    return 13 * table[player.genesisLevel] / 100;
+  }
+
+  function castGenesis(){
+    if(player.genesisLevel<=0)return;
+
+    const dmg=genesisDamage();
+    const visible=enemies.filter(e=>{
+      const sx=e.x-camera.x, sy=e.y-camera.y;
+      return e.hp>0 &&
+             sx>=-e.r && sx<=W+e.r &&
+             sy>=-e.r && sy<=H+e.r;
+    });
+
+    // 画面内の全敵へ同時ダメージ
+    for(let i=visible.length-1;i>=0;i--){
+      const e=visible[i];
+      e.hp-=dmg;
+      showDamageText(e.x,e.y-e.r-8,dmg);
+    }
+
+    // 死亡処理は元配列側から後ろ向きに
+    for(let i=enemies.length-1;i>=0;i--){
+      const e=enemies[i];
+      if(e.hp<=0)killEnemyAt(i,e);
+    }
+
+    genesisFx.push({life:.75,maxLife:.75});
+  }
+
+  function randomSkillChoice(){
+    const pool=[];
+    if(player.shockwaveLevel<5)pool.push('shockwave');
+    if(player.boomerangLevel<5)pool.push('boomerang');
+    if(player.turretLevel<5)pool.push('turret');
+    if(player.lightningLevel<5)pool.push('lightning');
+    if(player.genesisLevel<5)pool.push('genesis');
+    if(!pool.length)return null;
+    return {type:pool[Math.floor(Math.random()*pool.length)]};
+  }
+
+  function makeRandomCombinedChoice(){
+    // 各枠：35%でスキル、65%で通常弾能力。
+    // スキルが全てLv5なら通常弾能力のみ。
+    if(Math.random()<0.35){
+      const sk=randomSkillChoice();
+      if(sk)return sk;
+    }
+    // 念のため通常能力生成が失敗しても必ず有効な候補を返す
+    return makeLevelChoice() || {type:'power', rarity:'common', plus:1, minus:null};
+  }
+
+  const levelStats=[
+    {id:'range',name:'射程'},
+    {id:'power',name:'威力'},
+    {id:'rate',name:'連射'},
+    {id:'crit',name:'クリティカル'}
+  ];
+  let currentLevelChoices=[];
+
+  function randomOtherStat(exclude){
+    const pool=levelStats.filter(s=>s.id!==exclude);
+    return pool[Math.floor(Math.random()*pool.length)].id;
+  }
+
+  function statName(id){
+    return levelStats.find(s=>s.id===id)?.name || id;
+  }
+
+  function rollRarity(){
+    // コモン : アンコモン : レア = 4.5 : 3.5 : 2
+    const r=Math.random()*10;
+    if(r<4.5)return 'common';
+    if(r<8.0)return 'uncommon';
+    return 'rare';
+  }
+
+  function makeLevelChoice(){
+    const rarity=rollRarity();
+
+    // レベルアップ能力値：
+    // コモン +1
+    // アンコモン +2 / -1
+    // レア +3 / -1
+    if(rarity==='common'){
+      const benefit=levelStats[Math.floor(Math.random()*levelStats.length)].id;
+      return {rarity:'common',type:'stat',benefit,plus:1,minus:0,drawback:null};
+    }
+
+    if(rarity==='uncommon'){
+      const benefit=levelStats[Math.floor(Math.random()*levelStats.length)].id;
+      const drawback=randomOtherStat(benefit);
+      return {rarity:'uncommon',type:'stat',benefit,plus:2,minus:1,drawback};
+    }
+
+    const benefit=levelStats[Math.floor(Math.random()*levelStats.length)].id;
+    const drawback=randomOtherStat(benefit);
+    return {rarity:'rare',type:'stat',benefit,plus:3,minus:1,drawback};
+  }
+
+  function rarityName(rarity){
+    if(rarity==='common')return 'コモン';
+    if(rarity==='uncommon')return 'アンコモン';
+    return 'レア';
+  }
+
+  function prepareLevelChoices(){
+    const buttons=[...levelPanel.querySelectorAll('.choice')];
+    currentLevelChoices=[];
+
+    // 4枠すべてランダム。スキルも通常弾能力も混ざる。
+    // 同じレベルアップ画面で同じスキルが重複しないようにする。
+    const usedSkills=new Set();
+    const skillTypes=['shockwave','boomerang','turret','lightning','genesis'];
+
+    for(let i=0;i<4;i++){
+      let choice=null;
+
+      // 同一画面で同じスキルを避ける。見つからなければ通常能力へ確実にフォールバック。
+      for(let tries=0;tries<12;tries++){
+        const candidate=makeRandomCombinedChoice();
+        if(!candidate || !candidate.type)continue;
+
+        if(!skillTypes.includes(candidate.type) || !usedSkills.has(candidate.type)){
+          choice=candidate;
+          break;
+        }
+      }
+
+      if(!choice){
+        choice=makeLevelChoice() || {type:'power', rarity:'common', plus:1, minus:null};
+      }
+
+      if(skillTypes.includes(choice.type)){
+        usedSkills.add(choice.type);
+      }
+      currentLevelChoices.push(choice);
+    }
+
+    buttons.forEach((btn,i)=>{
+      const c=currentLevelChoices[i];
+      btn.dataset.choiceIndex=i;
+      btn.disabled=false;
+
+      if(c.type==='shockwave'){
+        const next=player.shockwaveLevel+1;
+        const nextR=70+(next-1)*25;
+        const nextD=Math.round((0.50+(next-1)*0.25)*100);
+        btn.innerHTML=`【スキル】衝撃波 Lv${next}<small>2秒ごと / 範囲 ${nextR}px / 初期攻撃力の${nextD}% / MAX Lv5</small>`;
+      }else if(c.type==='boomerang'){
+        const next=player.boomerangLevel+1;
+        const pct=Math.round((1.15+(next-1)*0.20)*200/9*1.5);
+        const hitRadius=12+(next-1)*6;
+        btn.innerHTML=`【スキル】ブーメラン Lv${next}<small>2秒ごと / 威力 ${pct}% / 攻撃半径 ${hitRadius}px / MAX Lv5</small>`;
+      }else if(c.type==='turret'){
+        const next=player.turretLevel+1;
+        const life=[0,6.0,6.75,7.5,8.25,9.0][next].toFixed(2).replace(/0+$/,'').replace(/\.$/,'');
+        const cd=[999,6.0,5.25,4.5,3.75,3.0][next].toFixed(2).replace(/0+$/,'').replace(/\.$/,'');
+        btn.innerHTML=`【スキル】タレット Lv${next}<small>0.5秒で4連射→1.5秒沈黙 / 威力3.25 / 持続${life}秒 / CT${cd}秒 / MAX Lv5</small>`;
+      }else if(c.type==='lightning'){
+        const next=player.lightningLevel+1;
+        const pct=150+(next-1)*25;
+        btn.innerHTML=`【スキル】落雷 Lv${next}<small>4秒ごと / ランダム${next}体 / 1体あたり初期攻撃力の${pct}% / MAX Lv5</small>`;
+      }else if(c.type==='genesis'){
+        const next=player.genesisLevel+1;
+        const pct=[0,400,600,800,1000,1300][next];
+        btn.innerHTML=`【スキル】ジェネシス Lv${next}<small>30秒ごと / 画面内の全敵 / 初期攻撃力の${pct}% / MAX Lv5</small>`;
+      }else if(c.type==='shots'){
+        btn.innerHTML=`【${rarityName(c.rarity)}】弾数 +1 / ${statName(c.drawback)} -2<small>弾数上昇はレア</small>`;
+      }else if(c.rarity==='common'){
+        btn.innerHTML=`【${rarityName(c.rarity)}】${statName(c.benefit)} +1<small>デメリットなし</small>`;
+      }else{
+        btn.innerHTML=`【${rarityName(c.rarity)}】${statName(c.benefit)} +${c.plus} / ${statName(c.drawback)} -${c.minus}<small>${c.rarity==='rare'?'大幅強化':'メリット＋デメリット'}</small>`;
+      }
+    });
+  }
+
+  function spawnEnemy(){
+    const minSpawn=360;
+    const maxSpawn=620;
+    let x=player.x,y=player.y;
+
+    for(let tries=0;tries<36;tries++){
+      const a=Math.random()*Math.PI*2;
+      const d=rand(minSpawn,maxSpawn);
+      const tx=player.x+Math.cos(a)*d;
+      const ty=player.y+Math.sin(a)*d;
+      if(
+        tx>world.margin && tx<world.w-world.margin &&
+        ty>world.margin && ty<world.h-world.margin &&
+        !hitsObstacle(tx,ty,18)
+      ){
+        x=tx;y=ty;break;
+      }
+    }
+
+    if(x===player.x && y===player.y){
+      for(let tries=0;tries<40;tries++){
+        const tx=rand(world.margin,world.w-world.margin);
+        const ty=rand(world.margin,world.h-world.margin);
+        if(!hitsObstacle(tx,ty,18)){x=tx;y=ty;break}
+      }
+    }
+
+    const spawnTable=[
+      'slime','slime','slime','slime','slime','slime',
+      'tentacle','tentacle','tentacle','tentacle','tentacle','tentacle',
+      'harpy','harpy','harpy','harpy','harpy','harpy',
+      'wolf','wolf','wolf',
+      'goblin','goblin','goblin',
+      'ghost'
+    ];
+    const type=spawnTable[Math.floor(Math.random()*spawnTable.length)];
+
+    const defs={
+      slime:   {r:14,hp:1.10,speed:.88,dmg:1.00,charge:1.00,cd:[4.5,7.0]},
+      tentacle:{r:13,hp:1.00,speed:.82,dmg:1.00,charge:1.00,cd:[4.5,7.0]},
+      goblin:  {r:12,hp:.90,speed:1.02,dmg:.90,charge:.55,cd:[3.8,6.0]},
+      wolf:    {r:12,hp:.90,speed:1.18,dmg:.90,charge:1.30,cd:[4.5,7.0]},
+      harpy:   {r:12,hp:.85,speed:1.08,dmg:.85,charge:1.00,cd:[4.5,7.0]},
+      ghost:   {r:12,hp:.85,speed:1.00,dmg:.85,charge:1.00,cd:[4.5,7.0],fixedSpeed:220}
+    };
+    const d=defs[type];
+    const baseHp=22+wave*5;
+    const hp=Math.max(12,Math.floor(baseHp*d.hp));
+
+    enemies.push({
+      x,y,type,
+      r:d.r,
+      hp,maxHp:hp,
+      speed:d.fixedSpeed ?? ((68+wave*4+Math.random()*16)*d.speed),
+      dmg:Math.max(4,Math.floor((8+wave*.8)*d.dmg)),
+      hitCd:0,
+      grabCd:rand(d.cd[0],d.cd[1]),
+      grabWarning:0,
+      grabActive:0,
+      chargeTime:d.charge,
+      attackDirX:1,
+      attackDirY:0,
+      dashGrab:false,
+      dashVx:0,
+      dashVy:0,
+      dashTime:0,
+      grabbing:false,
+      navTarget:null,
+      ghostSolid:type==='ghost',
+      ghostPhaseTimer:type==='ghost'?3:0
+    });
+  }
+
+  function nearestEnemy(){
+    let best=null,bestD=Infinity;
+    for(const e of enemies){
+      const dx=e.x-player.x,dy=e.y-player.y;
+      const d=dx*dx+dy*dy;
+      if(d<bestD){bestD=d;best=e}
+    }
+    return best;
+  }
+
+  function playerAttackRange(){
+    return (Math.max(90,W/3)*0.80) * (1+player.rangeLevel*0.10);
+  }
+
+  function playerCriticalChance(){
+    // 基本20%。クリティカル値1ごとに±5%。
+    // 実際の抽選確率だけ0～100%へ収める。
+    return Math.max(0,Math.min(1,0.20 + player.critLevel*0.05));
+  }
+
+  function rollPlayerCritical(){
+    return Math.random() < playerCriticalChance();
+  }
+
+  function nearestEnemyInPlayerRange(){
+    const range=Math.max(0,playerAttackRange());
+    const rangeSq=range*range;
+    let best=null,bestD=Infinity;
+    for(const e of enemies){
+      const dx=e.x-player.x,dy=e.y-player.y;
+      const d=dx*dx+dy*dy;
+      if(d<=rangeSq && d<bestD){
+        bestD=d;
+        best=e;
+      }
+    }
+    return best;
+  }
+
+  function fireNormal(){
+    // 射程外の敵にはエイムを向けない。
+    // 敵が射程内にいない間は最後に実際に撃った方向を保持する。
+    const target=nearestEnemyInPlayerRange();
+    if(!target)return false;
+
+    const dx=target.x-player.x;
+    const dy=target.y-player.y;
+    const aimLen=Math.hypot(dx,dy)||1;
+    player.aimX=dx/aimLen;
+    player.aimY=dy/aimLen;
+
+    const base=Math.atan2(player.aimY,player.aimX);
+    const spreadLv = player.activeWeapon==='spread' ? player.weaponSpreadLevel : 0;
+    const count=spreadLv===0 ? 1
+      : spreadLv===1 ? 2
+      : spreadLv===2 ? 3
+      : 5;
+    // ワンド：レベルが上がるほど広い扇状に連弾する。
+    // v14では近距離で全弾が同じ敵に集中しにくいよう拡散角を拡大。
+    const spread=spreadLv===0 ? 0
+      : spreadLv===1 ? 0.28   // 約16°
+      : spreadLv===2 ? 0.60   // 約34°
+      : 1.05;                 // 約60°
+    const baseRange=playerAttackRange();
+    const maxRange=baseRange;
+
+    const pierceLv=player.activeWeapon==='pierce' ? player.weaponPierceLevel : 0;
+    // 貫通武器は弾の太さではなく、レベルごとに弾速が上がる。
+    // 貫通：Lv1=3体、Lv2=5体、Lv3=無限。
+    const bulletRadius = 6;
+    const pierceCount = pierceLv===0 ? 0 : pierceLv===1 ? 3 : pierceLv===2 ? 5 : Infinity;
+    const maxHits = pierceLv===3 ? Infinity : 1 + pierceCount;
+    const bulletSpeed = pierceLv===0 ? 420 : pierceLv===1 ? 420 : pierceLv===2 ? 630 : 840;
+
+    for(let n=0;n<count;n++){
+      const t=count===1 ? 0 : (n/(count-1)-.5);
+      const a=base+t*spread;
+      projectiles.push({
+        kind:'normal',
+        x:player.x+Math.cos(a)*18,
+        y:player.y+Math.sin(a)*18,
+        vx:Math.cos(a)*bulletSpeed,
+        vy:Math.sin(a)*bulletSpeed,
+        speed:bulletSpeed,
+        turn:0.65,
+        r:bulletRadius,
+        life:99,
+        traveled:0,
+        maxRange,
+        damage:Math.max(1,player.atk*(1+player.powerLevel*.20)),
+        target,
+        maxHits,
+        hitCount:0,
+        hitSet:new Set()
+      });
+    }
+    onNormalVolley();
+    return true;
+  }
+
+  function fireExplosive(){
+    if(!player.explosiveOwned)return false;
+    const target=nearestEnemy();
+    if(!target)return false;
+    const dx=target.x-player.x;
+    const dy=target.y-player.y;
+    const len=Math.hypot(dx,dy)||1;
+    projectiles.push({
+      kind:'explosive',
+      x:player.x+dx/len*18,
+      y:player.y+dy/len*18,
+      vx:dx/len*360,
+      vy:dy/len*360,
+      speed:360,
+      turn:0.42,
+      r:8,
+      life:3.8,
+      target
+    });
+    return true;
+  }
+
+  function dash(){
+    if(pausedForLevel||player.grabbed||player.dashCd>0)return;
+    player.dashCd=1.1;
+    player.dashTime=.16;
+    player.invuln=.22;
+  }
+
+  function gainXp(v){
+    player.xp+=v;
+
+    // すでに能力選択中ならEXPだけ貯め、パネルを重ねて開かない。
+    if(pausedForLevel)return;
+
+    if(player.xp>=player.xpNeed){
+      player.xp-=player.xpNeed;
+      player.level++;
+      player.xpNeed=Math.floor(player.xpNeed*1.35);
+      pausedForLevel=true;
+      prepareLevelChoices();
+      levelPanel.style.display='flex';
+    }
+  }
+
+  function startGrab(e){
+    if(player.grabbed || player.invuln>0) return;
+    player.grabbed=true;
+    player.grabProgress=0;
+    player.grabEnemy=e;
+    e.grabbing=true;
+
+    grabFill.style.width='0%';
+    grabCount.textContent='0%';
+    grabOverlay.style.display='flex';
+    controls.style.display='none';
+  }
+
+  function escapeGrab(){
+    player.grabbed=false;
+    player.invuln=2.0;
+
+    if(player.grabEnemy){
+      const e=player.grabEnemy;
+      e.grabbing=false;
+      e.grabCd=rand(5.0,8.5);
+
+      // 拘束解除時に壁へ直接座標加算すると、壁の内部へ入ることがあった。
+      // 敵から離れる方向を第一候補にし、周囲の安全な地点を探索してから移動する。
+      const startX=player.x,startY=player.y;
+      let dx=player.x-e.x;
+      let dy=player.y-e.y;
+      let len=Math.hypot(dx,dy);
+      if(len<0.001){
+        dx=player.facingX||1;
+        dy=player.facingY||0;
+        len=Math.hypot(dx,dy)||1;
+      }
+      const ux=dx/len,uy=dy/len;
+      const pushDist=54;
+
+      const candidates=[];
+      // まず従来どおり「敵から真っ直ぐ離れる」地点。
+      candidates.push({x:startX+ux*pushDist,y:startY+uy*pushDist});
+
+      // 壁に当たる場合は少しずつ左右へ角度を振って安全地点を探す。
+      const angles=[30,-30,60,-60,90,-90,120,-120,150,-150,180];
+      for(const deg of angles){
+        const a=deg*Math.PI/180;
+        const rx=ux*Math.cos(a)-uy*Math.sin(a);
+        const ry=ux*Math.sin(a)+uy*Math.cos(a);
+        candidates.push({x:startX+rx*pushDist,y:startY+ry*pushDist});
+      }
+
+      // さらに距離を短くした候補も用意して、狭い通路でも壁に埋まらないようにする。
+      for(const dist of [42,30,18]){
+        candidates.push({x:startX+ux*dist,y:startY+uy*dist});
+      }
+
+      let placed=false;
+      for(const c of candidates){
+        const x=Math.max(world.margin,Math.min(world.w-world.margin,c.x));
+        const y=Math.max(world.margin,Math.min(world.h-world.margin,c.y));
+        if(!hitsObstacle(x,y,player.r)){
+          player.x=x;
+          player.y=y;
+          placed=true;
+          break;
+        }
+      }
+
+      // 元の位置が有効なら、無理に押し出さない。
+      if(!placed && !hitsObstacle(startX,startY,player.r)){
+        player.x=startX;
+        player.y=startY;
+      }
+    }
+
+    player.grabEnemy=null;
+    grabOverlay.style.display='none';
+    controls.style.display='block';
+  }
+
+  function tapEscape(){
+    if(!player.grabbed)return;
+
+    player.grabProgress=Math.min(100,player.grabProgress+player.grabTapPower);
+    grabFill.style.width=player.grabProgress+'%';
+    grabCount.textContent=`${Math.floor(player.grabProgress)}%`;
+
+    grabGaugeWrap.classList.remove('pulse');
+    void grabGaugeWrap.offsetWidth;
+    grabGaugeWrap.classList.add('pulse');
+
+    if(player.grabProgress>=100) escapeGrab();
+  }
+
+  grabOverlay.addEventListener('pointerdown',e=>{
+    e.preventDefault();
+    tapEscape();
+  });
+
+  levelPanel.addEventListener('click',e=>{
+    const btn=e.target.closest('.choice');
+    if(!btn || btn.disabled)return;
+    const index=Number(btn.dataset.choiceIndex);
+    const choice=currentLevelChoices[index];
+    if(!choice)return;
+
+    // iPhone等で同じタップが二重処理されないよう、選択肢を即ロック。
+    [...levelPanel.querySelectorAll('.choice')].forEach(b=>b.disabled=true);
+
+    const addStat=(id,amount)=>{
+      if(id==='range')player.rangeLevel+=amount;
+      if(id==='power')player.powerLevel+=amount;
+      if(id==='rate')player.rateLevel+=amount;
+      if(id==='crit')player.critLevel+=amount;
+    };
+
+    if(choice.type==='shockwave'){
+      player.shockwaveLevel=Math.min(5,player.shockwaveLevel+1);
+      if(player.shockwaveLevel===1)player.shockwaveCd=.15;
+    }else if(choice.type==='boomerang'){
+      player.boomerangLevel=Math.min(5,player.boomerangLevel+1);
+      if(player.boomerangLevel===1)player.boomerangCd=.15;
+    }else if(choice.type==='turret'){
+      player.turretLevel=Math.min(5,player.turretLevel+1);
+      if(player.turretLevel===1)player.turretSpawnCd=0;
+    }else if(choice.type==='lightning'){
+      player.lightningLevel=Math.min(5,player.lightningLevel+1);
+      player.lightningCd=.15;
+    }else if(choice.type==='genesis'){
+      player.genesisLevel=Math.min(5,player.genesisLevel+1);
+      // 初取得・レベルアップ後は検証しやすいように少し早く初回発動
+      player.genesisCd=.35;
+    }else{
+      addStat(choice.benefit,choice.plus);
+      if(choice.drawback)addStat(choice.drawback,-choice.minus);
+    }
+
+    // 初期1秒。連射+1ごとに現在の発射間隔×0.9。
+    player.fireInterval=Math.min(3.0,Math.max(.12,Math.pow(.9,player.rateLevel)));
+
+    // 選択直後に大量の未処理レベルアップが重なって見かけ上停止するのを防ぐ。
+    pausedForLevel=false;
+    levelPanel.style.display='none';
+
+    // 余剰EXPで次のLv条件も満たしている場合は、ゲームを1フレーム進めてから次を出す。
+    if(player.xp>=player.xpNeed){
+      setTimeout(()=>{
+        if(!pausedForLevel && !player.grabbed){
+          player.xp-=player.xpNeed;
+          player.level++;
+          player.xpNeed=Math.floor(player.xpNeed*1.35);
+          pausedForLevel=true;
+          prepareLevelChoices();
+          levelPanel.style.display='flex';
+        }
+      },0);
+    }
+  });
+
+  const keys={};
+  addEventListener('keydown',e=>{
+    if(player.weaponSwapConfirm)return;
+    keys[e.key.toLowerCase()]=true;
+    if(player.grabbed){
+      if(e.code==='Space' || e.key==='Enter') tapEscape();
+      return;
+    }
+    if(e.key.toLowerCase()==='shift')dash();
+  });
+  addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+
+  let stickX=0,stickY=0,stickId=null;
+  const movePad=document.getElementById('movePad');
+  const moveKnob=document.getElementById('moveKnob');
+
+  function updateStick(e){
+    const r=movePad.getBoundingClientRect();
+    const cx=r.left+r.width/2,cy=r.top+r.height/2;
+    let dx=e.clientX-cx,dy=e.clientY-cy;
+    const max=42,len=Math.hypot(dx,dy)||1;
+    if(len>max){dx=dx/len*max;dy=dy/len*max}
+    stickX=dx/max;stickY=dy/max;
+    moveKnob.style.transform=`translate(${dx}px,${dy}px)`;
+  }
+
+  movePad.addEventListener('pointerdown',e=>{
+    stickId=e.pointerId;
+    movePad.setPointerCapture(e.pointerId);
+    updateStick(e);
+  });
+  movePad.addEventListener('pointermove',e=>{
+    if(e.pointerId===stickId)updateStick(e);
+  });
+  function endStick(e){
+    if(e.pointerId!==stickId)return;
+    stickId=null;stickX=0;stickY=0;
+    moveKnob.style.transform='translate(0,0)';
+  }
+  movePad.addEventListener('pointerup',endStick);
+  movePad.addEventListener('pointercancel',endStick);
+
+  document.getElementById('dashBtn').addEventListener('pointerdown',e=>{
+    e.preventDefault();dash();
+  });
+
+  restartBtn.addEventListener('pointerdown',e=>{
+    e.preventDefault();
+    resetGame();
+  });
+
+  function killEnemyAt(index,e){
+    if(!enemies.includes(e))return;
+    if(Math.random()<0.28) spawnSanityPickup(e.x,e.y);
+    spawnXpDrops(e.x,e.y);
+    weaponDropKillCount++;
+    if(weaponDropKillCount>=30){
+      weaponDropKillCount-=30;
+      spawnGuaranteedRandomWeapon(e.x,e.y);
+    }
+    enemies.splice(index,1);
+    player.kills++;
+  }
+
+  function explodeAt(x,y,damage,radius,excludeEnemy=null){
+    // 爆心付近の敵すべてにダメージ。
+    // 直撃した敵は通常弾ダメージだけにして、爆発ダメージを重複させない。
+    for(let j=enemies.length-1;j>=0;j--){
+      const e=enemies[j];
+      if(e===excludeEnemy)continue;
+      const dx=e.x-x,dy=e.y-y;
+      if(dx*dx+dy*dy<=radius*radius){
+        e.hp-=damage;
+        showDamageText(e.x,e.y-e.r-8,damage);
+        if(e.hp<=0) killEnemyAt(j,e);
+      }
+    }
+
+    // 短時間の爆発表示
+    pickups.push({
+      type:'explosion_fx',
+      x,y,
+      r:radius,
+      life:.18,
+      maxLife:.18,
+      bob:0
+    });
+  }
+
+  function weaponExplosionRadius(){
+    const lv=player.weaponExplosiveLevel;
+    if(lv<=0)return 0;
+
+    // 新Lv1は旧Lv1(55px)の70%。以後はLv1基準で150% / 200%。
+    const baseRadius=55*0.70; // 38.5px
+    return lv===1 ? baseRadius
+      : lv===2 ? baseRadius*1.50   // 57.75px
+      : baseRadius*2.00;           // 77px
+  }
+
+  function weaponExplosionDamage(baseBulletDamage){
+    const lv=player.weaponExplosiveLevel;
+    if(lv<=0)return 0;
+
+    // 強化後の通常弾ダメージを基準にした追加爆発ダメージ。
+    const mul=lv===1 ? 0.20 : lv===2 ? 0.30 : 0.50;
+    return baseBulletDamage*mul;
+  }
+
+  function updateProjectiles(dt){
+    for(let i=projectiles.length-1;i>=0;i--){
+      const p=projectiles[i];
+      p.life-=dt;
+      if(p.life<=0){projectiles.splice(i,1);continue}
+
+      if(p.kind==='boomerang'){
+        p.rotationHitTimer += dt;
+        const boomerangHitInterval=0.2;
+        if(p.rotationHitTimer>=boomerangHitInterval){
+          p.rotationHitTimer%=boomerangHitInterval;
+          p.hitSet.clear();
+        }
+
+        if(!p.returning){
+          const stepX=p.vx*dt, stepY=p.vy*dt;
+          p.x+=stepX;p.y+=stepY;
+          p.traveled+=Math.hypot(stepX,stepY);
+          if(p.traveled>=p.maxRange)p.returning=true;
+        }else{
+          const dx=player.x-p.x,dy=player.y-p.y;
+          const dist=Math.hypot(dx,dy)||1;
+          if(dist<=player.r+p.r){
+            projectiles.splice(i,1);
+            continue;
+          }
+          p.vx=dx/dist*p.speed;
+          p.vy=dy/dist*p.speed;
+          p.x+=p.vx*dt;
+          p.y+=p.vy*dt;
+        }
+
+        for(let j=enemies.length-1;j>=0;j--){
+          const e=enemies[j];
+          const dx=e.x-p.x,dy=e.y-p.y;
+          if(dx*dx+dy*dy<(e.r+p.r)*(e.r+p.r) && !p.hitSet.has(e)){
+            p.hitSet.add(e);
+            e.hp-=p.damage;
+           showDamageText(e.x,e.y-e.r-8,p.damage);
+            showDamageText(e.x,e.y-e.r-8,p.damage);
+            if(e.hp<=0)killEnemyAt(j,e);
+          }
+        }
+        continue;
+      }
+
+      if(p.target && p.target.hp>0 && enemies.includes(p.target)){
+        const dx=p.target.x-p.x;
+        const dy=p.target.y-p.y;
+        const len=Math.hypot(dx,dy)||1;
+        const desiredX=dx/len*p.speed;
+        const desiredY=dy/len*p.speed;
+        const blend=Math.min(1,p.turn*dt);
+        p.vx+=(desiredX-p.vx)*blend;
+        p.vy+=(desiredY-p.vy)*blend;
+        const vl=Math.hypot(p.vx,p.vy)||1;
+        p.vx=p.vx/vl*p.speed;
+        p.vy=p.vy/vl*p.speed;
+      }else{
+        p.target=null;
+      }
+
+      const stepX=p.vx*dt;
+      const stepY=p.vy*dt;
+      p.x+=stepX;
+      p.y+=stepY;
+
+      if(p.kind==='normal'){
+        p.traveled=(p.traveled||0)+Math.hypot(stepX,stepY);
+        if(p.traveled>=p.maxRange){
+          projectiles.splice(i,1);
+          continue;
+        }
+      }
+
+      let hit=false;
+      for(let j=enemies.length-1;j>=0;j--){
+        const e=enemies[j];
+        const dx=e.x-p.x,dy=e.y-p.y;
+        if(dx*dx+dy*dy<(e.r+p.r)*(e.r+p.r)){
+          if(p.kind==='normal'){
+            if(p.hitSet && p.hitSet.has(e))continue;
+            if(p.hitSet)p.hitSet.add(e);
+
+            const baseHitDamage=(p.damage ?? player.atk);
+            const critical=rollPlayerCritical();
+            const hitDamage=critical ? baseHitDamage*2 : baseHitDamage;
+            const impactX=e.x, impactY=e.y;
+            e.hp-=hitDamage;
+            showDamageText(e.x,e.y-e.r-8,hitDamage,critical);
+            p.hitCount=(p.hitCount||0)+1;
+
+            if(e.hp<=0) killEnemyAt(j,e);
+
+            // 爆発弾：直撃した敵は通常弾のみ。周囲の敵に範囲ダメージ（人数上限なし）。
+            if(player.activeWeapon==='explosive'){
+              explodeAt(
+                impactX,
+                impactY,
+                weaponExplosionDamage(hitDamage),
+                weaponExplosionRadius(),
+                e
+              );
+            }
+
+            // Lv0=通常、Lv1=3体貫通、Lv2=5体貫通、Lv3=無限貫通。
+            if(Number.isFinite(p.maxHits) && p.hitCount>=p.maxHits){
+              hit=true;
+              break;
+            }
+            continue;
+          }
+
+          hit=true;
+          if(p.kind==='explosive'){
+            explodeAt(p.x,p.y,explosiveDamage(),explosiveRadius());
+          }else{
+            const hitDamage=(p.damage ?? player.atk);
+            e.hp-=hitDamage;
+            showDamageText(e.x,e.y-e.r-8,hitDamage);
+            if(e.hp<=0) killEnemyAt(j,e);
+          }
+          break;
+        }
+      }
+
+      if(hit)projectiles.splice(i,1);
+    }
+  }
+
+  function update(dt){
+    if(player.weaponSwapConfirm)return;
+    if(gameOver)return;
+    if(pausedForLevel)return;
+
+    // 拘束中はゲーム世界を完全停止。
+    // 理性は減り続け、脱出ゲージは理性が低いほど激しく減衰する。
+    if(player.grabbed){
+      player.sanity=Math.max(0,player.sanity-player.grabSanityDrain*dt);
+
+      const sanityRatio=player.maxSanity>0 ? player.sanity/player.maxSanity : 0;
+      const escapeDecay=6 + (1-sanityRatio)*(1-sanityRatio)*36;
+      player.grabProgress=Math.max(0,player.grabProgress-escapeDecay*dt);
+
+      grabFill.style.width=player.grabProgress+'%';
+      grabCount.textContent=`${Math.floor(player.grabProgress)}%`;
+
+      if(player.sanity<=0){
+        player.sanity=0;
+        triggerGameOver();
+      }
+      return;
+    }
+
+    player.fireCd-=dt;
+
+    // 衝撃波・ブーメラン：基本攻撃とは独立して2秒ごとに発動
+    if(player.shockwaveLevel>0){
+      player.shockwaveCd-=dt;
+      if(player.shockwaveCd<=0){
+        triggerShockwave();
+        player.shockwaveCd=shockwaveCooldown();
+      }
+    }
+
+    if(player.boomerangLevel>0){
+      player.boomerangCd-=dt;
+      if(player.boomerangCd<=0){
+        triggerBoomerang();
+        player.boomerangCd=2.0;
+      }
+    }
+
+    // タレット自動設置
+    if(player.turretLevel>0){
+      player.turretSpawnCd-=dt;
+      if(player.turretSpawnCd<=0){
+        spawnTurret();
+        player.turretSpawnCd=turretCooldown();
+      }
+    }
+
+    for(let i=turrets.length-1;i>=0;i--){
+      const t=turrets[i];
+      t.life-=dt;
+      if(t.life<=0){
+        turrets.splice(i,1);
+        continue;
+      }
+
+      t.fireCd-=dt;
+      if(t.fireCd<=0){
+        fireTurret(t);
+        t.burstShotsLeft--;
+        if(t.burstShotsLeft>0){
+          t.fireCd=t.burstInterval;
+        }else{
+          t.burstShotsLeft=4;
+          t.fireCd=t.burstPause;
+        }
+      }
+    }
+
+    // 落雷：4秒に1回
+    if(player.lightningLevel>0){
+      player.lightningCd-=dt;
+      if(player.lightningCd<=0){
+        castLightning();
+        player.lightningCd=4.0;
+      }
+    }
+
+    // ジェネシス：全Lv共通CT30秒
+    if(player.genesisLevel>0){
+      player.genesisCd-=dt;
+      if(player.genesisCd<=0){
+        castGenesis();
+        player.genesisCd=30.0;
+      }
+    }
+
+    for(let i=lightningFx.length-1;i>=0;i--){
+      lightningFx[i].life-=dt;
+      if(lightningFx[i].life<=0)lightningFx.splice(i,1);
+    }
+
+    for(let i=genesisFx.length-1;i>=0;i--){
+      genesisFx[i].life-=dt;
+      if(genesisFx[i].life<=0)genesisFx.splice(i,1);
+    }
+
+    for(let i=damageTexts.length-1;i>=0;i--){
+      const d=damageTexts[i];
+      d.life-=dt;
+      d.sy-=30*dt;
+      if(d.life<=0)damageTexts.splice(i,1);
+    }
+
+    for(let i=skillFx.length-1;i>=0;i--){
+      skillFx[i].life-=dt;
+      if(skillFx[i].life<=0)skillFx.splice(i,1);
+    }
+
+    player.dashCd=Math.max(0,player.dashCd-dt);
+    player.dashTime=Math.max(0,player.dashTime-dt);
+    player.invuln=Math.max(0,player.invuln-dt);
+
+    let mx=stickX,my=stickY;
+    if(keys['a']||keys['arrowleft'])mx-=1;
+    if(keys['d']||keys['arrowright'])mx+=1;
+    if(keys['w']||keys['arrowup'])my-=1;
+    if(keys['s']||keys['arrowdown'])my+=1;
+
+    const len=Math.hypot(mx,my);
+    if(len>0){
+      mx/=len;my/=len;
+      player.facingX=mx;player.facingY=my;
+      const mult=player.dashTime>0?2.8:1;
+
+      // 理性50%以上は通常速度。
+      // 50%未満から理性低下に応じて滑らかに減速する。
+      const sanityRatio=player.maxSanity>0 ? player.sanity/player.maxSanity : 0;
+      const sanityMoveFactor = sanityRatio>=0.5
+        ? 1
+        : 0.27 + 0.73*(sanityRatio/0.5);
+
+      const currentMoveSpeed=player.speed*sanityMoveFactor;
+      movePlayerWithWalls(
+        mx*currentMoveSpeed*mult*dt,
+        my*currentMoveSpeed*mult*dt
+      );
+    }
+
+    player.x=Math.max(world.margin,Math.min(world.w-world.margin,player.x));
+    player.y=Math.max(world.margin,Math.min(world.h-world.margin,player.y));
+
+    if(player.fireCd<=0 && enemies.length){
+      fireNormal();
+      player.fireCd=player.fireInterval;
+    }
+
+    spawnTimer-=dt;
+    const cap=Math.min(14+wave*3,48);
+    if(spawnTimer<=0&&enemies.length<cap){
+      spawnEnemy();
+      spawnTimer=Math.max(.10,.58-wave*.025);
+    }
+
+    wave=1+Math.floor(player.kills/18);
+
+    // ドロップアイテム（理性回復 / 経験値 / レアスキル）
+    for(let i=pickups.length-1;i>=0;i--){
+      const p=pickups[i];
+      p.life-=dt;
+
+      if(p.type==='explosion_fx'){
+        if(p.life<=0) pickups.splice(i,1);
+        continue;
+      }
+
+      p.bob+=dt*4;
+      const pdx=player.x-p.x, pdy=player.y-p.y;
+
+      // 経験値だけ取得範囲を広めにする。
+      // そばを通り抜けるだけでも回収できる程度。
+      const pickupRange = p.type==='xp'
+        ? player.r+p.r+42
+        : player.r+p.r+4;
+
+      if(Math.hypot(pdx,pdy)<pickupRange){
+        let handledWeapon=false;
+        if(p.type==='xp'){
+          gainXp(p.xp);
+        }else if(p.type==='weapon_pierce'){
+          handledWeapon=true;
+          requestWeaponPickup('pierce',i);
+        }else if(p.type==='weapon_spread'){
+          handledWeapon=true;
+          requestWeaponPickup('spread',i);
+        }else if(p.type==='weapon_explosive'){
+          handledWeapon=true;
+          requestWeaponPickup('explosive',i);
+        }else if(p.type==='skill_explosive'){
+          player.explosiveOwned=true;
+          player.explosiveLevel=1;
+          player.explosiveCd=-1;
+        }else{
+          player.sanity=Math.min(player.maxSanity,player.sanity+p.heal);
+        }
+        if(!handledWeapon)pickups.splice(i,1);
+        continue;
+      }
+
+      if(p.life<=0) pickups.splice(i,1);
+    }
+
+    for(const e of enemies){
+      e.hitCd=Math.max(0,e.hitCd-dt);
+      e.grabCd=Math.max(0,e.grabCd-dt);
+
+      if(e.type==='ghost'){
+        e.ghostPhaseTimer-=dt;
+        if(e.ghostPhaseTimer<=0){
+          e.ghostPhaseTimer+=3;
+          e.ghostSolid=!e.ghostSolid;
+          if(!e.ghostSolid){e.grabWarning=0;e.grabActive=0;}
+          else e.grabCd=Math.max(e.grabCd,.35);
+        }
+        if(!e.ghostSolid) continue;
+      }
+
+      const dx=player.x-e.x,dy=player.y-e.y;
+      const dist=Math.hypot(dx,dy)||1;
+      const vx=dx/dist*e.speed,vy=dy/dist*e.speed;
+
+      // ウルフ：少し長い溜め → 方向固定 → 前方突進拘束
+      if(e.type==='wolf'){
+        if(e.dashGrab){
+          e.dashTime-=dt;
+          e.x+=e.dashVx*dt;
+          e.y+=e.dashVy*dt;
+
+          // 壁にぶつかったら突進終了
+          if(hitsObstacle(e.x,e.y,e.r)){
+            e.x-=e.dashVx*dt;
+            e.y-=e.dashVy*dt;
+            e.dashGrab=false;
+            e.grabCd=rand(4.5,7.0);
+            continue;
+          }
+
+          const dd=Math.hypot(player.x-e.x,player.y-e.y);
+          if(dd<player.r+e.r+6 && player.invuln<=0){
+            e.dashGrab=false;
+            startGrab(e);
+            continue;
+          }
+          if(e.dashTime<=0){
+            e.dashGrab=false;
+            e.grabCd=rand(4.5,7.0);
+          }
+          continue;
+        }
+
+        if(e.grabWarning>0){
+          e.grabWarning-=dt;
+          // 溜め中は静止
+          if(e.grabWarning<=0){
+            const tx=player.x-e.x,ty=player.y-e.y;
+            const tl=Math.hypot(tx,ty)||1;
+            e.attackDirX=tx/tl;e.attackDirY=ty/tl;
+            const dashSpeed=650;
+            e.dashVx=e.attackDirX*dashSpeed;
+            e.dashVy=e.attackDirY*dashSpeed;
+            e.dashTime=.62;
+            e.dashGrab=true;
+          }
+          continue;
+        }
+
+        if(e.grabCd<=0 && dist<245){
+          e.grabWarning=e.chargeTime;
+          continue;
+        }
+
+        moveEnemyPathfind(e,dt);
+      }else{
+        // スライム / 触手 / ゴブリン / ハーピー
+        if(e.grabActive>0){
+          e.grabActive-=dt;
+
+          let caught=false;
+          if(e.type==='slime' || e.type==='harpy' || e.type==='ghost'){
+            // 全方位・小
+            caught=Math.hypot(player.x-e.x,player.y-e.y)<(e.type==='ghost'?58:72);
+          }else if(e.type==='tentacle'){
+            // 前方・長
+            caught=pointInFrontBox(player.x,player.y,e,110,54);
+          }else if(e.type==='goblin'){
+            // 前方・小
+            caught=pointInFrontBox(player.x,player.y,e,82,62);
+          }
+
+          if(caught && player.invuln<=0){
+            startGrab(e);
+            e.grabActive=0;
+          }else if(e.grabActive<=0){
+            e.grabCd=e.type==='goblin'?rand(3.8,6.0):rand(4.5,7.0);
+          }
+          continue;
+        }
+
+        if(e.grabWarning>0){
+          e.grabWarning-=dt;
+
+          // 溜め中も通常移動。攻撃方向はプレイヤーへ追従。
+          e.attackDirX=dx/dist;
+          e.attackDirY=dy/dist;
+
+          if(e.type==='ghost') moveGhost(e,dt); else moveEnemyPathfind(e,dt);
+
+          if(e.grabWarning<=0){
+            e.grabActive=.48;
+          }
+          continue;
+        }
+
+        const attackStartDist =
+          e.type==='ghost'?100:
+          e.type==='tentacle'?135:
+          e.type==='goblin'?105:
+          115;
+
+        if(e.grabCd<=0 && dist<attackStartDist){
+          e.attackDirX=dx/dist;
+          e.attackDirY=dy/dist;
+          e.grabWarning=e.chargeTime;
+          continue;
+        }
+
+        if(e.type==='ghost') moveGhost(e,dt); else moveEnemyPathfind(e,dt);
+      }
+
+      // 接触ダメージ
+      const ndx=player.x-e.x,ndy=player.y-e.y;
+      const ndist=Math.hypot(ndx,ndy)||1;
+      if(ndist<player.r+e.r+2&&e.hitCd<=0&&player.invuln<=0){
+        e.hitCd=.7;
+        player.sanity-=e.dmg;
+        const kx=ndx/ndist,ky=ndy/ndist;
+        movePlayerWithWalls(kx*18,ky*18);
+        if(player.sanity<0)player.sanity=0;
+      }
+    }
+
+    updateProjectiles(dt);
+  }
+
+
+  function triggerGameOver(){
+    if(gameOver)return;
+    gameOver=true;
+    player.grabbed=false;
+    grabOverlay.style.display='none';
+    controls.style.display='none';
+    gameOverOverlay.style.display='flex';
+  }
+
+  function resetGame(){
+    player.sanity=100;player.maxSanity=100;
+    player.atk=13;player.speed=220;
+    player.fireInterval=1.0;player.fireCd=.2;player.explosiveCd=-1;player.rangeLevel=0;player.powerLevel=0;player.rateLevel=0;player.critLevel=0;player.shotCount=1;
+    player.level=1;player.xp=0;player.xpNeed=34;player.kills=0;
+    player.x=world.w*.5;player.y=world.h*.5;
+    player.dashCd=0;player.dashTime=0;player.invuln=1;player.aimX=1;player.aimY=0;
+    player.grabbed=false;player.grabProgress=0;player.grabEnemy=null;
+    player.explosiveOwned=false;player.explosiveLevel=0;
+        enemies=[];projectiles=[];pickups=[];wave=1;spawnTimer=0;
+    gameOver=false;
+    grabOverlay.style.display='none';
+    gameOverOverlay.style.display='none';
+    controls.style.display='block';
+  }
+
+  function updateCamera(){
+    // プレイヤーをなるべく中央に置きつつ、マップ端ではカメラだけ止める。
+    const maxX=Math.max(0,world.w-W);
+    const maxY=Math.max(0,world.h-H);
+    camera.x=Math.max(0,Math.min(maxX,player.x-W*.5));
+    camera.y=Math.max(0,Math.min(maxY,player.y-H*.5));
+  }
+
+  function drawGrid(){
+    ctx.fillStyle='#171717';
+    ctx.fillRect(0,0,W,H);
+
+    // ワールド座標を画面へ変換したグリッド。
+    ctx.strokeStyle='#262626';
+    ctx.lineWidth=1;
+    const s=48;
+    const startX=Math.floor(camera.x/s)*s;
+    const startY=Math.floor(camera.y/s)*s;
+    ctx.beginPath();
+    for(let x=startX;x<=camera.x+W+s;x+=s){
+      const sx=x-camera.x;
+      ctx.moveTo(sx,0);ctx.lineTo(sx,H);
+    }
+    for(let y=startY;y<=camera.y+H+s;y+=s){
+      const sy=y-camera.y;
+      ctx.moveTo(0,sy);ctx.lineTo(W,sy);
+    }
+    ctx.stroke();
+
+    // マップ外周
+    ctx.strokeStyle='#555';
+    ctx.lineWidth=4;
+    ctx.strokeRect(-camera.x,-camera.y,world.w,world.h);
+
+    // 田の字を作る中央の壁
+    for(const o of obstacles){
+      ctx.fillStyle='#303030';
+      ctx.fillRect(o.x-camera.x,o.y-camera.y,o.w,o.h);
+      ctx.strokeStyle='#666';
+      ctx.lineWidth=3;
+      ctx.strokeRect(o.x-camera.x,o.y-camera.y,o.w,o.h);
+    }
+  }
+
+  function draw(){
+    updateCamera();
+    drawGrid();
+
+    for(const f of skillFx){
+      if(f.type!=='shockwave')continue;
+      const sx=f.x-camera.x, sy=f.y-camera.y;
+      const t=Math.max(0,f.life/f.maxLife);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(sx,sy,f.r*(1-t*.10),0,Math.PI*2);
+      ctx.lineWidth=5;
+      ctx.strokeStyle=`rgba(140,225,255,${0.95*t})`;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(sx,sy,f.r*.72*(1-t*.10),0,Math.PI*2);
+      ctx.lineWidth=2;
+      ctx.strokeStyle=`rgba(225,250,255,${0.65*t})`;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    for(const p of pickups){
+      const sx=p.x-camera.x;
+      const sy=p.y-camera.y + Math.sin(p.bob||0)*3;
+
+      if(p.type==='explosion_fx'){
+        const t=Math.max(0,p.life/p.maxLife);
+        ctx.beginPath();
+        ctx.arc(sx,sy,p.r*(1-t*.15),0,Math.PI*2);
+        ctx.fillStyle=`rgba(255,150,45,${0.28*t})`;
+        ctx.fill();
+        ctx.lineWidth=3;
+        ctx.strokeStyle=`rgba(255,220,120,${0.75*t})`;
+        ctx.stroke();
+      }else if(p.type==='skill_explosive'){
+        ctx.save();
+        ctx.translate(sx,sy);
+        ctx.rotate(performance.now()*.002);
+        ctx.beginPath();
+        for(let k=0;k<8;k++){
+          const a=Math.PI*2*k/8;
+          const rr=k%2===0?p.r+5:p.r-2;
+          const px=Math.cos(a)*rr, py=Math.sin(a)*rr;
+          if(k===0)ctx.moveTo(px,py); else ctx.lineTo(px,py);
+        }
+        ctx.closePath();
+        ctx.fillStyle='#ff8a2a';
+        ctx.fill();
+        ctx.lineWidth=2;
+        ctx.strokeStyle='#fff0bf';
+        ctx.stroke();
+        ctx.restore();
+      }else if(p.type==='weapon_explosive'){
+        ctx.save();
+        ctx.translate(sx,sy);
+        ctx.rotate(performance.now()*.0018);
+        ctx.beginPath();
+        for(let k=0;k<10;k++){
+          const a=-Math.PI/2 + k*Math.PI/5;
+          const rr=(k%2===0)?p.r+5:(p.r+5)*.43;
+          const px=Math.cos(a)*rr, py=Math.sin(a)*rr;
+          if(k===0)ctx.moveTo(px,py); else ctx.lineTo(px,py);
+        }
+        ctx.closePath();
+        ctx.fillStyle='#a855f7';
+        ctx.fill();
+        ctx.lineWidth=2;
+        ctx.strokeStyle='#f3e8ff';
+        ctx.stroke();
+        ctx.restore();
+      }else if(p.type==='weapon_spread'){
+        ctx.save();
+        ctx.translate(sx,sy);
+        ctx.rotate(performance.now()*.0018);
+        ctx.beginPath();
+        for(let k=0;k<10;k++){
+          const a=-Math.PI/2 + k*Math.PI/5;
+          const rr=(k%2===0)?p.r+5:(p.r+5)*.43;
+          const px=Math.cos(a)*rr, py=Math.sin(a)*rr;
+          if(k===0)ctx.moveTo(px,py); else ctx.lineTo(px,py);
+        }
+        ctx.closePath();
+        ctx.fillStyle='#ef4444';
+        ctx.fill();
+        ctx.lineWidth=2;
+        ctx.strokeStyle='#fee2e2';
+        ctx.stroke();
+        ctx.restore();
+      }else if(p.type==='weapon_pierce'){
+        ctx.save();
+        ctx.translate(sx,sy);
+        ctx.rotate(performance.now()*.0018);
+        ctx.beginPath();
+        for(let k=0;k<10;k++){
+          const a=-Math.PI/2 + k*Math.PI/5;
+          const rr=(k%2===0)?p.r+5:(p.r+5)*.43;
+          const px=Math.cos(a)*rr, py=Math.sin(a)*rr;
+          if(k===0)ctx.moveTo(px,py); else ctx.lineTo(px,py);
+        }
+        ctx.closePath();
+        ctx.fillStyle='#3b82f6';
+        ctx.fill();
+        ctx.lineWidth=2;
+        ctx.strokeStyle='#dbeafe';
+        ctx.stroke();
+        ctx.restore();
+      }else if(p.type==='xp'){
+        ctx.save();
+        ctx.translate(sx,sy);
+        ctx.rotate(Math.PI/4);
+        ctx.fillStyle='rgba(250,204,21,.20)';
+        ctx.fillRect(-p.r-4,-p.r-4,(p.r+4)*2,(p.r+4)*2);
+        ctx.fillStyle='#facc15';
+        ctx.fillRect(-p.r,-p.r,p.r*2,p.r*2);
+        ctx.strokeStyle='#fff7b2';
+        ctx.lineWidth=2;
+        ctx.strokeRect(-p.r,-p.r,p.r*2,p.r*2);
+        ctx.restore();
+      }else{
+        ctx.beginPath();
+        ctx.arc(sx,sy,p.r+4,0,Math.PI*2);
+        ctx.fillStyle='rgba(103,232,249,.16)';
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(sx,sy,p.r,0,Math.PI*2);
+        ctx.fillStyle='#67e8f9';
+        ctx.fill();
+        ctx.lineWidth=2;
+        ctx.strokeStyle='#dffcff';
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(sx-4,sy);
+        ctx.lineTo(sx+4,sy);
+        ctx.moveTo(sx,sy-4);
+        ctx.lineTo(sx,sy+4);
+        ctx.strokeStyle='#083344';
+        ctx.lineWidth=2;
+        ctx.stroke();
+      }
+    }
+
+    for(const t of turrets){
+      const sx=t.x-camera.x,sy=t.y-camera.y;
+      const pulse=1+Math.sin(performance.now()*.008)*.08;
+      ctx.save();
+      ctx.translate(sx,sy);
+      ctx.beginPath();
+      ctx.arc(0,0,13*pulse,0,Math.PI*2);
+      ctx.fillStyle='rgba(110,220,255,.20)';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(0,0,8,0,Math.PI*2);
+      ctx.fillStyle='#78ddff';
+      ctx.fill();
+      ctx.lineWidth=2;
+      ctx.strokeStyle='#eaffff';
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(0,0,17,-Math.PI/2,-Math.PI/2+Math.PI*2*(t.life/t.maxLife));
+      ctx.lineWidth=2;
+      ctx.strokeStyle='rgba(190,245,255,.8)';
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    for(const p of projectiles){
+      const sx=p.x-camera.x,sy=p.y-camera.y;
+
+      if(p.kind==='boomerang'){
+        ctx.save();
+        ctx.translate(sx,sy);
+        ctx.rotate(performance.now()*.012);
+        const visualScale=p.r/24;
+        ctx.beginPath();
+        ctx.moveTo(0,-28*visualScale);
+        ctx.lineTo(18*visualScale,0);
+        ctx.lineTo(0,28*visualScale);
+        ctx.lineTo(-18*visualScale,0);
+        ctx.closePath();
+        ctx.fillStyle=p.returning?'#bfefff':'#8fe8ff';
+        ctx.fill();
+        ctx.lineWidth=2;
+        ctx.strokeStyle='#f3ffff';
+        ctx.stroke();
+        ctx.restore();
+        continue;
+      }
+
+      ctx.beginPath();
+      ctx.arc(sx,sy,p.r+4,0,Math.PI*2);
+      ctx.fillStyle=p.kind==='explosive'
+        ? 'rgba(255,140,50,.24)'
+        : p.kind==='turret'
+          ? 'rgba(100,225,255,.22)'
+          : 'rgba(170,130,255,.18)';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(sx,sy,p.r,0,Math.PI*2);
+      ctx.fillStyle=p.kind==='explosive'
+        ? '#ff8a2a'
+        : p.kind==='turret'
+          ? '#8eeaff'
+          : '#cbb7ff';
+      ctx.fill();
+    }
+
+    for(const e of enemies){
+      const ex=e.x-camera.x,ey=e.y-camera.y;
+
+      const enemyColors={
+        slime:'#5dbb63',
+        tentacle:'#8f63b8',
+        goblin:'#8f783d',
+        wolf:'#a66c4f',
+        harpy:'#b86fa5',
+        ghost:'#88a7c8'
+      };
+
+      ctx.beginPath();
+      ctx.arc(ex,ey,e.r,0,Math.PI*2);
+      ctx.fillStyle=enemyColors[e.type]||'#8a2d2d';
+      ctx.fill();
+
+      // 種類が分かる簡易記号
+      ctx.font='900 10px system-ui';
+      ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      ctx.fillStyle='#fff';
+      const labels={slime:'S',tentacle:'T',goblin:'G',wolf:'W',harpy:'H',ghost:'X'};
+      ctx.fillText(labels[e.type]||'?',ex,ey);
+
+      if(e.grabWarning>0){
+        ctx.font='900 30px system-ui';
+        ctx.textAlign='center';
+        ctx.textBaseline='alphabetic';
+        ctx.fillStyle='#fff';
+        ctx.strokeStyle='#000';
+        ctx.lineWidth=6;
+        ctx.strokeText('!',ex,ey-e.r-25);
+        ctx.fillText('!',ex,ey-e.r-25);
+
+        // 溜め中から攻撃方向を薄く予告
+        if(e.type==='tentacle' || e.type==='goblin' || e.type==='wolf'){
+          const len=e.type==='tentacle'?110:e.type==='goblin'?82:150;
+          ctx.beginPath();
+          ctx.moveTo(ex,ey);
+          ctx.lineTo(ex+e.attackDirX*len,ey+e.attackDirY*len);
+          ctx.strokeStyle='rgba(255,120,120,.35)';
+          ctx.lineWidth=e.type==='goblin'?18:12;
+          ctx.stroke();
+        }
+      }
+
+      if(e.grabActive>0){
+        if(e.type==='slime' || e.type==='harpy' || e.type==='ghost'){
+          ctx.beginPath();
+          ctx.arc(ex,ey,e.type==='ghost'?58:72,0,Math.PI*2);
+          ctx.fillStyle='rgba(255,70,70,.18)';
+          ctx.fill();
+          ctx.strokeStyle='rgba(255,80,80,.9)';
+          ctx.lineWidth=4;
+          ctx.stroke();
+        }else{
+          const len=e.type==='tentacle'?110:82;
+          const width=e.type==='tentacle'?54:62;
+          ctx.save();
+          ctx.translate(ex,ey);
+          ctx.rotate(Math.atan2(e.attackDirY,e.attackDirX));
+          ctx.fillStyle='rgba(255,70,70,.20)';
+          ctx.strokeStyle='rgba(255,80,80,.9)';
+          ctx.lineWidth=4;
+          ctx.fillRect(0,-width*.5,len,width);
+          ctx.strokeRect(0,-width*.5,len,width);
+          ctx.restore();
+        }
+      }
+
+      if(e.type==='wolf' && e.dashGrab){
+        ctx.beginPath();
+        ctx.moveTo(ex,ey);
+        ctx.lineTo(ex-e.dashVx*.045,ey-e.dashVy*.045);
+        ctx.strokeStyle='rgba(255,170,100,.8)';
+        ctx.lineWidth=6;
+        ctx.stroke();
+      }
+
+      ctx.fillStyle='#000';
+      ctx.fillRect(ex-16,ey-e.r-10,32,4);
+      ctx.fillStyle='#ddd';
+      ctx.fillRect(ex-16,ey-e.r-10,32*(e.hp/e.maxHp),4);
+    }
+
+    // ジェネシスエフェクト
+    for(const fx of genesisFx){
+      const a=Math.max(0,fx.life/fx.maxLife);
+      ctx.save();
+      ctx.globalAlpha=.18 + .55*a;
+
+      // 画面全体フラッシュ
+      ctx.fillStyle='#efe8ff';
+      ctx.fillRect(0,0,W,H);
+
+      // 中央から広がる大きな円
+      const maxR=Math.hypot(W,H)*.72;
+      const r=(1-a)*maxR;
+      ctx.beginPath();
+      ctx.arc(W/2,H/2,r,0,Math.PI*2);
+      ctx.lineWidth=10;
+      ctx.strokeStyle='#ffffff';
+      ctx.stroke();
+
+      // 魔法陣っぽい二重円
+      ctx.beginPath();
+      ctx.arc(W/2,H/2,Math.max(20,r*.55),0,Math.PI*2);
+      ctx.lineWidth=4;
+      ctx.strokeStyle='#d9c8ff';
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // 落雷エフェクト
+    ctx.save();
+    ctx.lineWidth=4;
+    for(const fx of lightningFx){
+      const sx=fx.x-camera.x,sy=fx.y-camera.y;
+      const a=Math.max(0,fx.life/fx.maxLife);
+      ctx.globalAlpha=a;
+      ctx.beginPath();
+      ctx.moveTo(sx-14,sy-105);
+      ctx.lineTo(sx+5,sy-72);
+      ctx.lineTo(sx-7,sy-45);
+      ctx.lineTo(sx+10,sy-18);
+      ctx.lineTo(sx,sy);
+      ctx.strokeStyle='#fff';
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(sx,sy,9+(1-a)*23,0,Math.PI*2);
+      ctx.strokeStyle='rgba(210,225,255,.95)';
+      ctx.lineWidth=3;
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // ダメージ数字
+    ctx.save();
+    ctx.font='900 20px system-ui';
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    for(const d of damageTexts){
+      const a=Math.max(0,d.life/d.maxLife);
+      ctx.globalAlpha=Math.min(1,a*1.6);
+      ctx.lineWidth=5;
+      ctx.strokeStyle='rgba(0,0,0,.90)';
+      ctx.strokeText(d.text,d.sx,d.sy);
+      ctx.fillStyle=d.critical?'#ff3b30':'#ffe36b';
+      ctx.fillText(d.text,d.sx,d.sy);
+    }
+    ctx.restore();
+
+    // 取得済みスキルLvを右上に表示
+    ctx.save();
+    ctx.font='700 13px system-ui';
+    ctx.textAlign='right';
+    ctx.textBaseline='top';
+    ctx.fillStyle='#fff';
+    const skillText=[
+      player.activeWeapon==='pierce'?`ロッド Lv${player.weaponPierceLevel}`:'',
+      player.activeWeapon==='spread'?`ワンド Lv${player.weaponSpreadLevel}`:'',
+      player.activeWeapon==='explosive'?`魔導書 Lv${player.weaponExplosiveLevel}`:'',
+      player.shockwaveLevel?`衝撃波${player.shockwaveLevel}`:'',
+      player.boomerangLevel?`ブメ${player.boomerangLevel}`:'',
+      player.turretLevel?`タレット${player.turretLevel}`:'',
+      player.lightningLevel?`雷${player.lightningLevel}`:'',
+      player.genesisLevel?`ジェネシス${player.genesisLevel}`:''
+    ].filter(Boolean).join(' / ');
+    if(skillText)ctx.fillText(skillText,W-14,14);
+    ctx.restore();
+
+    {
+      const baseR=(Math.max(90,W/3)*0.80)*(1+player.rangeLevel*0.10);
+      const rr=baseR;
+      ctx.save();
+      ctx.strokeStyle='rgba(255,255,255,.18)';
+      ctx.lineWidth=1.5;
+      ctx.setLineDash([7,7]);
+      ctx.beginPath();
+      ctx.arc(player.x-camera.x,player.y-camera.y,rr,0,Math.PI*2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.translate(player.x-camera.x,player.y-camera.y);
+    ctx.globalAlpha=player.invuln>0?.5+.5*Math.sin(performance.now()/40):1;
+
+    ctx.beginPath();
+    ctx.arc(0,3,player.r,0,Math.PI*2);
+    ctx.fillStyle='#e6e6e6';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(-14,-8);
+    ctx.lineTo(0,-31);
+    ctx.lineTo(14,-8);
+    ctx.closePath();
+    ctx.fillStyle='#777';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(-18,-8);
+    ctx.lineTo(18,-8);
+    ctx.strokeStyle='#aaa';
+    ctx.lineWidth=4;
+    ctx.stroke();
+    ctx.restore();
+
+    xpTxt.textContent=`${Math.max(0,Math.floor(player.xp))}/${player.xpNeed}`;
+    lvTxt.textContent=player.level;
+    if(atkTxt) atkTxt.textContent=player.atk;
+    const bh=document.getElementById('buildHud');
+    if(bh){
+      const baseR=Math.max(90,W/3)*(1+player.rangeLevel*.70);
+      const rangeTable=[0,1,.75,.5,.25];
+      const sc=Math.min(4,Math.max(1,player.shotCount));
+      const actualR=Math.round(baseR*rangeTable[sc]);
+      const critPct=Math.max(0,Math.min(100,20+player.critLevel*5));
+      bh.textContent=`射程 ${player.rangeLevel>=0?'+':''}${player.rangeLevel}（実射程 ${actualR}px / ${Math.round(rangeTable[sc]*100)}%） ｜ 威力 ${player.powerLevel>=0?'+':''}${player.powerLevel} ｜ 連射 ${player.rateLevel>=0?'+':''}${player.rateLevel} ｜ クリティカル ${player.critLevel>=0?'+':''}${player.critLevel}（${critPct}%）`;
+    }
+    killTxt.textContent=player.kills;
+    waveTxt.textContent=wave;
+    enemyTxt.textContent=enemies.length;
+    const sanityPct=Math.max(0,Math.min(100,player.sanity/player.maxSanity*100));
+    sanityFill.style.width=sanityPct+'%';
+    sanityTxt.textContent=`${Math.max(0,Math.ceil(player.sanity))}/${player.maxSanity}`;
+    grabSanityTxt.textContent=`理性 ${Math.max(0,Math.ceil(player.sanity))}/${player.maxSanity}`;
+  }
+
+  function loop(t){
+    const dt=Math.min((t-last)/1000||0,.033);
+    last=t;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
+<style>
+#characterPortrait,#grabCharacter{display:none!important}
+#grabScene{height:120px!important;width:min(72vw,520px)!important;align-items:center!important}
+#grabGaugeWrap{top:50%!important;transform:translate(-50%,-50%)!important}
+</style>
