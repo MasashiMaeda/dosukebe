@@ -3,15 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>淫乱度HUD・上昇率調整 v43</title>
+<title>右サイドHUD整理 v45</title>
 <style>
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;height:100%;overflow:hidden;background:#111;color:#fff;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
   #wrap{position:relative;width:100%;height:100%;background:#181818}
   canvas{display:block;width:100%;height:100%;touch-action:none}
-  #hud{position:absolute;left:12px;top:10px;right:12px;display:flex;justify-content:space-between;pointer-events:none;font-weight:700;text-shadow:0 2px 4px #000}
-  #leftHud,#rightHud{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-  .pill{padding:6px 10px;border:1px solid #777;border-radius:999px;background:rgba(0,0,0,.45);font-size:13px}
+  #hud{position:absolute;right:12px;top:10px;width:190px;display:flex;flex-direction:column;gap:7px;pointer-events:none;font-weight:700;text-shadow:0 2px 4px #000;z-index:4}
+  .hudRow{padding:6px 9px;border:1px solid #777;border-radius:10px;background:rgba(0,0,0,.52);font-size:13px;line-height:1.35}
+  .hudLabel{color:#bbb;font-size:11px;margin-bottom:2px}
+  .hudValue{color:#fff;font-weight:850}
+  #lustHud{font-size:16px;border-color:#9a668d}
+  #statsTxt,#skillsTxt{white-space:normal}
   #sanityWrap{position:absolute;left:12px;right:12px;bottom:10px;pointer-events:none}
   #sanityLabel{display:flex;justify-content:space-between;font-size:12px;font-weight:800;margin-bottom:4px;text-shadow:0 2px 4px #000}
   #sanityBar{height:12px;border:1px solid #777;background:#222;border-radius:999px;overflow:hidden}
@@ -128,9 +131,10 @@
   #rotateText{font-size:18px;line-height:1.5}
   @media (orientation:landscape){
     #hud{
-      left:max(12px,env(safe-area-inset-left));
+      left:auto;
       right:max(12px,env(safe-area-inset-right));
       top:max(8px,env(safe-area-inset-top));
+      width:min(190px,28vw);
     }
     #movePad{
       left:max(18px,calc(env(safe-area-inset-left) + 10px));
@@ -217,20 +221,13 @@
 <div id="wrap">
   <canvas id="game"></canvas>
 <div id="hud">
-    <div id="leftHud">
-      <div class="pill">EXP <span id="xpTxt">0/100</span></div>
-      <div class="pill">LV <span id="lvTxt">1</span></div>
-      
-      <div class="pill">KILL <span id="killTxt">0</span></div>
-    </div>
-    <div id="rightHud">
-      
-      <div class="pill">WAVE <span id="waveTxt">1</span></div>
-      <div class="pill">敵 <span id="enemyTxt">0</span></div>
-      <div class="pill" id="lustHud" style="font-size:18px;font-weight:800;">淫乱度 <span id="lustTxt">0%</span></div>
-    </div>
+    <div class="hudRow" id="lustHud"><span class="hudLabel">淫乱度</span><br><span class="hudValue" id="lustTxt">0%</span></div>
+    <div class="hudRow"><span class="hudLabel">WAVE</span><br><span class="hudValue" id="waveTxt">1</span></div>
+    <div class="hudRow"><span class="hudLabel">倒した敵</span><br><span class="hudValue"><span id="killTxt">0</span>体</span></div>
+    <div class="hudRow"><div class="hudLabel">武器</div><div class="hudValue" id="weaponTxt">なし</div></div>
+    <div class="hudRow"><div class="hudLabel">能力値</div><div class="hudValue" id="statsTxt">射程 ±0 / 威力 ±0 / 連射 ±0 / CRIT ±0</div></div>
+    <div class="hudRow"><div class="hudLabel">スキル</div><div class="hudValue" id="skillsTxt">なし</div></div>
   </div>
-
   <div id="hint">田の字ステージ / S:スライム T:触手 G:ゴブリン W:ウルフ H:ハーピー</div>
   <div id="sanityWrap">
     <div id="sanityLabel"><span>理性</span><span id="sanityTxt">100/100</span></div>
@@ -306,6 +303,9 @@
   const waveTxt = document.getElementById('waveTxt');
   const enemyTxt = document.getElementById('enemyTxt');
   const lustTxt = document.getElementById('lustTxt');
+  const weaponTxt = document.getElementById('weaponTxt');
+  const statsTxt = document.getElementById('statsTxt');
+  const skillsTxt = document.getElementById('skillsTxt');
   const sanityFill = document.getElementById('sanityFill');
   const sanityTxt = document.getElementById('sanityTxt');
   const levelPanel = document.getElementById('levelPanel');
@@ -2558,25 +2558,6 @@
     }
     ctx.restore();
 
-    // 取得済みスキルLvを右上に表示
-    ctx.save();
-    ctx.font='700 13px system-ui';
-    ctx.textAlign='right';
-    ctx.textBaseline='top';
-    ctx.fillStyle='#fff';
-    const skillText=[
-      player.activeWeapon==='pierce'?`ロッド Lv${player.weaponPierceLevel}`:'',
-      player.activeWeapon==='spread'?`ワンド Lv${player.weaponSpreadLevel}`:'',
-      player.activeWeapon==='explosive'?`魔導書 Lv${player.weaponExplosiveLevel}`:'',
-      player.shockwaveLevel?`衝撃波${player.shockwaveLevel}`:'',
-      player.boomerangLevel?`ブメ${player.boomerangLevel}`:'',
-      player.turretLevel?`タレット${player.turretLevel}`:'',
-      player.lightningLevel?`雷${player.lightningLevel}`:'',
-      player.genesisLevel?`ジェネシス${player.genesisLevel}`:''
-    ].filter(Boolean).join(' / ');
-    if(skillText)ctx.fillText(skillText,W-14,14);
-    ctx.restore();
-
     {
       const baseR=(Math.max(90,W/3)*0.80)*(1+player.rangeLevel*0.10);
       const rr=baseR;
@@ -2615,8 +2596,8 @@
     ctx.stroke();
     ctx.restore();
 
-    xpTxt.textContent=`${Math.max(0,Math.floor(player.xp))}/${player.xpNeed}`;
-    lvTxt.textContent=player.level;
+    if(xpTxt) xpTxt.textContent=`${Math.max(0,Math.floor(player.xp))}/${player.xpNeed}`;
+    if(lvTxt) lvTxt.textContent=player.level;
     if(atkTxt) atkTxt.textContent=player.atk;
     const bh=document.getElementById('buildHud');
     if(bh){
@@ -2629,8 +2610,27 @@
     }
     killTxt.textContent=player.kills;
     waveTxt.textContent=wave;
-    enemyTxt.textContent=enemies.length;
+    if(enemyTxt) enemyTxt.textContent=enemies.length;
     if(lustTxt) lustTxt.textContent=`${Math.round(player.lust)}%`; // 1%単位表示
+    if(weaponTxt){
+      weaponTxt.textContent = player.activeWeapon==='pierce' ? `ロッド Lv${player.weaponPierceLevel}`
+        : player.activeWeapon==='spread' ? `ワンド Lv${player.weaponSpreadLevel}`
+        : player.activeWeapon==='explosive' ? `魔導書 Lv${player.weaponExplosiveLevel}` : 'なし';
+    }
+    if(statsTxt){
+      const sign=n=>n>0?`+${n}`:`${n===0?'±0':n}`;
+      statsTxt.textContent=`射程 ${sign(player.rangeLevel)} / 威力 ${sign(player.powerLevel)} / 連射 ${sign(player.rateLevel)} / CRIT ${sign(player.critLevel)}`;
+    }
+    if(skillsTxt){
+      const ss=[
+        player.shockwaveLevel?`衝撃波 Lv${player.shockwaveLevel}`:'',
+        player.boomerangLevel?`ブーメラン Lv${player.boomerangLevel}`:'',
+        player.turretLevel?`タレット Lv${player.turretLevel}`:'',
+        player.lightningLevel?`落雷 Lv${player.lightningLevel}`:'',
+        player.genesisLevel?`ジェネシス Lv${player.genesisLevel}`:''
+      ].filter(Boolean);
+      skillsTxt.textContent=ss.length?ss.join(' / '):'なし';
+    }
     const sanityPct=Math.max(0,Math.min(100,player.sanity/player.maxSanity*100));
     sanityFill.style.width=sanityPct+'%';
     sanityTxt.textContent=`${Math.max(0,Math.ceil(player.sanity))}/${player.maxSanity}`;
