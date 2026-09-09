@@ -1205,8 +1205,12 @@
     };
     const lv=levelDefs[enemyLevel];
 
-    const baseHp=22+1*5; // 基礎敵HPは初期強さに固定
-    const hp=Math.max(12,Math.floor(baseHp*d.hp*lv.hp));
+    const baseHp=22+1*5;
+    // WAVEごとに少しずつ強化。移動速度はWAVEでは上げない。
+    // HP: 1WAVEごとに+8% / 攻撃力: 1WAVEごとに+5%
+    const waveHpMult=1+(wave-1)*0.08;
+    const waveAttackMult=1+(wave-1)*0.05;
+    const hp=Math.max(12,Math.floor(baseHp*d.hp*lv.hp*waveHpMult));
 
     enemies.push({
       x,y,type,
@@ -1216,7 +1220,7 @@
       r:d.r*lv.size,
       hp,maxHp:hp,
       speed:(d.fixedSpeed ?? ((68+1*4+Math.random()*16)*d.speed))*lv.speed, // 高Lvは鈍足
-      dmg:Math.max(4,Math.floor((8+1*.8)*d.dmg*lv.attack)), // 高Lvは攻撃力上昇
+      dmg:Math.max(4,Math.floor((8+1*.8)*d.dmg*lv.attack*waveAttackMult)), // 高Lv＋WAVEで攻撃力上昇
       hitCd:0,
       grabCd:rand(d.cd[0],d.cd[1]),
       grabWarning:0,
@@ -1383,7 +1387,7 @@
   function startGrab(e){
     if(player.grabbed || player.invuln>0) return;
     player.grabbed=true;
-    player.lust=Math.min(player.maxLust,player.lust+5);
+    player.lust=Math.min(player.maxLust,player.lust+1);
     player.grabProgress=0;
     player.grabEnemy=e;
     e.grabbing=true;
