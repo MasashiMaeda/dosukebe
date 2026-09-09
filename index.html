@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>武器ブランチ タレットホーミング強化 v40</title>
+<title>淫乱度HUD・上昇率調整 v43</title>
 <style>
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;height:100%;overflow:hidden;background:#111;color:#fff;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -224,8 +224,10 @@
       <div class="pill">KILL <span id="killTxt">0</span></div>
     </div>
     <div id="rightHud">
+      
       <div class="pill">WAVE <span id="waveTxt">1</span></div>
       <div class="pill">敵 <span id="enemyTxt">0</span></div>
+      <div class="pill" id="lustHud" style="font-size:18px;font-weight:800;">淫乱度 <span id="lustTxt">0%</span></div>
     </div>
   </div>
 
@@ -303,6 +305,7 @@
   const killTxt = document.getElementById('killTxt');
   const waveTxt = document.getElementById('waveTxt');
   const enemyTxt = document.getElementById('enemyTxt');
+  const lustTxt = document.getElementById('lustTxt');
   const sanityFill = document.getElementById('sanityFill');
   const sanityTxt = document.getElementById('sanityTxt');
   const levelPanel = document.getElementById('levelPanel');
@@ -508,6 +511,7 @@
   const player = {
     x:world.w*.5,y:world.h*.5,r:15,
     sanity:100,maxSanity:100,
+    lust:0,maxLust:100,
     atk:13,
     speed:220,
     level:1,xp:0,xpNeed:34,
@@ -563,6 +567,21 @@
   let gameOver=false;
 
   function rand(a,b){return a+Math.random()*(b-a)}
+
+  function lustDamageMultiplier(){
+    const r=Math.max(0,Math.min(1,player.lust/player.maxLust));
+    // 淫乱度0%=等倍、100%=3倍。後半ほど急激に危険になる。
+    return 1 + 2*r*r;
+  }
+
+  function lustMoveFactor(){
+    const l=player.lust;
+    // 移動速度だけは段階制。
+    if(l>=100) return 0.40;
+    if(l>=75) return 0.60;
+    if(l>=50) return 0.80;
+    return 1.00;
+  }
 
   function spawnSanityPickup(x,y){
     pickups.push({
@@ -1170,15 +1189,35 @@
       ghost:   {r:12,hp:.85,speed:1.00,dmg:.85,charge:1.00,cd:[4.5,7.0],fixedSpeed:220}
     };
     const d=defs[type];
-    const baseHp=22+wave*5;
-    const hp=Math.max(12,Math.floor(baseHp*d.hp));
+
+    // スライム / 触手だけLv1〜3を持つ。
+    // Lvが高いほど「大きい・硬い・痛い・遅い」。
+    // 出現率は Lv1 60% / Lv2 30% / Lv3 10%。
+    let enemyLevel=0;
+    if(type==='slime' || type==='tentacle'){
+      const roll=Math.random();
+      enemyLevel=roll<0.60?1:roll<0.90?2:3;
+    }
+    const levelDefs={
+      0:{size:1.00,hp:1.00,attack:1.00,speed:1.00},
+      1:{size:1.00,hp:1.00,attack:1.00,speed:1.00},
+      2:{size:1.25,hp:1.75,attack:1.50,speed:0.85},
+      3:{size:1.50,hp:2.75,attack:2.00,speed:0.70}
+    };
+    const lv=levelDefs[enemyLevel];
+
+    const baseHp=22+1*5; // 基礎敵HPは初期強さに固定
+    const hp=Math.max(12,Math.floor(baseHp*d.hp*lv.hp));
 
     enemies.push({
       x,y,type,
-      r:d.r,
+      level:enemyLevel,
+      sizeMult:lv.size,
+      levelAttackMult:lv.attack,
+      r:d.r*lv.size,
       hp,maxHp:hp,
-      speed:d.fixedSpeed ?? ((68+wave*4+Math.random()*16)*d.speed),
-      dmg:Math.max(4,Math.floor((8+wave*.8)*d.dmg)),
+      speed:(d.fixedSpeed ?? ((68+1*4+Math.random()*16)*d.speed))*lv.speed, // 高Lvは鈍足
+      dmg:Math.max(4,Math.floor((8+1*.8)*d.dmg*lv.attack)), // 高Lvは攻撃力上昇
       hitCd:0,
       grabCd:rand(d.cd[0],d.cd[1]),
       grabWarning:0,
@@ -1345,6 +1384,7 @@
   function startGrab(e){
     if(player.grabbed || player.invuln>0) return;
     player.grabbed=true;
+    player.lust=Math.min(player.maxLust,player.lust+5);
     player.grabProgress=0;
     player.grabEnemy=e;
     e.grabbing=true;
@@ -1746,7 +1786,7 @@
     // 拘束中はゲーム世界を完全停止。
     // 理性は減り続け、脱出ゲージは理性が低いほど激しく減衰する。
     if(player.grabbed){
-      player.sanity=Math.max(0,player.sanity-player.grabSanityDrain*dt);
+      player.sanity=Math.max(0,player.sanity-player.grabSanityDrain*(player.grabEnemy?.levelAttackMult ?? 1)*dt);
 
       const sanityRatio=player.maxSanity>0 ? player.sanity/player.maxSanity : 0;
       const escapeDecay=6 + (1-sanityRatio)*(1-sanityRatio)*36;
@@ -1867,14 +1907,9 @@
       player.facingX=mx;player.facingY=my;
       const mult=player.dashTime>0?2.8:1;
 
-      // 理性50%以上は通常速度。
-      // 50%未満から理性低下に応じて滑らかに減速する。
-      const sanityRatio=player.maxSanity>0 ? player.sanity/player.maxSanity : 0;
-      const sanityMoveFactor = sanityRatio>=0.5
-        ? 1
-        : 0.27 + 0.73*(sanityRatio/0.5);
-
-      const currentMoveSpeed=player.speed*sanityMoveFactor;
+      // 理性による移動速度低下は廃止。
+      // 淫乱度による段階的な速度低下のみ適用。
+      const currentMoveSpeed=player.speed*lustMoveFactor();
       movePlayerWithWalls(
         mx*currentMoveSpeed*mult*dt,
         my*currentMoveSpeed*mult*dt
@@ -2022,10 +2057,10 @@
           let caught=false;
           if(e.type==='slime' || e.type==='harpy' || e.type==='ghost'){
             // 全方位・小
-            caught=Math.hypot(player.x-e.x,player.y-e.y)<(e.type==='ghost'?58:72);
+            caught=Math.hypot(player.x-e.x,player.y-e.y)<(e.type==='ghost'?58:72*(e.sizeMult||1));
           }else if(e.type==='tentacle'){
             // 前方・長
-            caught=pointInFrontBox(player.x,player.y,e,110,54);
+            caught=pointInFrontBox(player.x,player.y,e,110*(e.sizeMult||1),54*(e.sizeMult||1));
           }else if(e.type==='goblin'){
             // 前方・小
             caught=pointInFrontBox(player.x,player.y,e,82,62);
@@ -2057,8 +2092,9 @@
 
         const attackStartDist =
           e.type==='ghost'?100:
-          e.type==='tentacle'?135:
+          e.type==='tentacle'?135*(e.sizeMult||1):
           e.type==='goblin'?105:
+          e.type==='slime'?115*(e.sizeMult||1):
           115;
 
         if(e.grabCd<=0 && dist<attackStartDist){
@@ -2076,7 +2112,7 @@
       const ndist=Math.hypot(ndx,ndy)||1;
       if(ndist<player.r+e.r+2&&e.hitCd<=0&&player.invuln<=0){
         e.hitCd=.7;
-        player.sanity-=e.dmg;
+        player.sanity-=e.dmg*lustDamageMultiplier();
         const kx=ndx/ndist,ky=ndy/ndist;
         movePlayerWithWalls(kx*18,ky*18);
         if(player.sanity<0)player.sanity=0;
@@ -2097,7 +2133,7 @@
   }
 
   function resetGame(){
-    player.sanity=100;player.maxSanity=100;
+    player.sanity=100;player.maxSanity=100;player.lust=0;player.maxLust=100;
     player.atk=13;player.speed=220;
     player.fireInterval=1.0;player.fireCd=.2;player.explosiveCd=-1;player.rangeLevel=0;player.powerLevel=0;player.rateLevel=0;player.critLevel=0;player.shotCount=1;
     player.level=1;player.xp=0;player.xpNeed=34;player.kills=0;
@@ -2390,7 +2426,7 @@
       ctx.textBaseline='middle';
       ctx.fillStyle='#fff';
       const labels={slime:'S',tentacle:'T',goblin:'G',wolf:'W',harpy:'H',ghost:'X'};
-      ctx.fillText(labels[e.type]||'?',ex,ey);
+      ctx.fillText((e.level?`${labels[e.type]}${e.level}`:(labels[e.type]||'?')),ex,ey);
 
       if(e.grabWarning>0){
         ctx.font='900 30px system-ui';
@@ -2404,12 +2440,12 @@
 
         // 溜め中から攻撃方向を薄く予告
         if(e.type==='tentacle' || e.type==='goblin' || e.type==='wolf'){
-          const len=e.type==='tentacle'?110:e.type==='goblin'?82:150;
+          const len=e.type==='tentacle'?110*(e.sizeMult||1):e.type==='goblin'?82:150;
           ctx.beginPath();
           ctx.moveTo(ex,ey);
           ctx.lineTo(ex+e.attackDirX*len,ey+e.attackDirY*len);
           ctx.strokeStyle='rgba(255,120,120,.35)';
-          ctx.lineWidth=e.type==='goblin'?18:12;
+          ctx.lineWidth=e.type==='tentacle'?12*(e.sizeMult||1):e.type==='goblin'?18:12;
           ctx.stroke();
         }
       }
@@ -2417,15 +2453,15 @@
       if(e.grabActive>0){
         if(e.type==='slime' || e.type==='harpy' || e.type==='ghost'){
           ctx.beginPath();
-          ctx.arc(ex,ey,e.type==='ghost'?58:72,0,Math.PI*2);
+          ctx.arc(ex,ey,e.type==='ghost'?58:72*(e.sizeMult||1),0,Math.PI*2);
           ctx.fillStyle='rgba(255,70,70,.18)';
           ctx.fill();
           ctx.strokeStyle='rgba(255,80,80,.9)';
           ctx.lineWidth=4;
           ctx.stroke();
         }else{
-          const len=e.type==='tentacle'?110:82;
-          const width=e.type==='tentacle'?54:62;
+          const len=e.type==='tentacle'?110*(e.sizeMult||1):82;
+          const width=e.type==='tentacle'?54*(e.sizeMult||1):62;
           ctx.save();
           ctx.translate(ex,ey);
           ctx.rotate(Math.atan2(e.attackDirY,e.attackDirX));
@@ -2594,6 +2630,7 @@
     killTxt.textContent=player.kills;
     waveTxt.textContent=wave;
     enemyTxt.textContent=enemies.length;
+    if(lustTxt) lustTxt.textContent=`${Math.round(player.lust)}%`; // 1%単位表示
     const sanityPct=Math.max(0,Math.min(100,player.sanity/player.maxSanity*100));
     sanityFill.style.width=sanityPct+'%';
     sanityTxt.textContent=`${Math.max(0,Math.ceil(player.sanity))}/${player.maxSanity}`;
