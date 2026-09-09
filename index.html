@@ -200,8 +200,8 @@
   #weaponSwapNo{background:#4b5563}
 </style>
 </head>
-<body><div id="buildHud" style="position:fixed;right:max(8px,env(safe-area-inset-right));top:max(8px,env(safe-area-inset-top));z-index:9999;padding:6px 9px;border-radius:10px;background:#111b;color:#fff;font:600 10px sans-serif;pointer-events:none">射程 0 ｜ 威力 0 ｜ 連射 0 ｜ クリティカル 20%</div>
-<div id="skillTestSceneBadge" style="position:fixed;left:50%;top:max(6px,env(safe-area-inset-top));transform:translateX(-50%);z-index:9999;padding:4px 10px;border-radius:10px;background:#111b;color:#fff;font:700 12px sans-serif;pointer-events:none">スキルテスト</div>
+<body>
+
 <div id="weaponSwapOverlay">
   <div id="weaponSwapCard">
     <div id="weaponSwapTitle">武器を入れ替えますか？</div>
@@ -228,7 +228,6 @@
     <div class="hudRow"><div class="hudLabel">能力値</div><div class="hudValue" id="statsTxt">射程 ±0 / 威力 ±0 / 連射 ±0 / CRIT ±0</div></div>
     <div class="hudRow"><div class="hudLabel">スキル</div><div class="hudValue" id="skillsTxt">なし</div></div>
   </div>
-  <div id="hint">田の字ステージ / S:スライム T:触手 G:ゴブリン W:ウルフ H:ハーピー</div>
   <div id="sanityWrap">
     <div id="sanityLabel"><span>理性</span><span id="sanityTxt">100/100</span></div>
     <div id="sanityBar"><div id="sanityFill"></div></div>
@@ -2599,15 +2598,6 @@
     if(xpTxt) xpTxt.textContent=`${Math.max(0,Math.floor(player.xp))}/${player.xpNeed}`;
     if(lvTxt) lvTxt.textContent=player.level;
     if(atkTxt) atkTxt.textContent=player.atk;
-    const bh=document.getElementById('buildHud');
-    if(bh){
-      const baseR=Math.max(90,W/3)*(1+player.rangeLevel*.70);
-      const rangeTable=[0,1,.75,.5,.25];
-      const sc=Math.min(4,Math.max(1,player.shotCount));
-      const actualR=Math.round(baseR*rangeTable[sc]);
-      const critPct=Math.max(0,Math.min(100,20+player.critLevel*5));
-      bh.textContent=`射程 ${player.rangeLevel>=0?'+':''}${player.rangeLevel}（実射程 ${actualR}px / ${Math.round(rangeTable[sc]*100)}%） ｜ 威力 ${player.powerLevel>=0?'+':''}${player.powerLevel} ｜ 連射 ${player.rateLevel>=0?'+':''}${player.rateLevel} ｜ クリティカル ${player.critLevel>=0?'+':''}${player.critLevel}（${critPct}%）`;
-    }
     killTxt.textContent=player.kills;
     waveTxt.textContent=wave;
     if(enemyTxt) enemyTxt.textContent=enemies.length;
