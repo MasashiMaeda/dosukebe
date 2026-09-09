@@ -1387,7 +1387,6 @@
   function startGrab(e){
     if(player.grabbed || player.invuln>0) return;
     player.grabbed=true;
-    player.lust=Math.min(player.maxLust,player.lust+1);
     player.grabProgress=0;
     player.grabEnemy=e;
     e.grabbing=true;
@@ -1789,6 +1788,10 @@
     // 拘束中はゲーム世界を完全停止。
     // 理性は減り続け、脱出ゲージは理性が低いほど激しく減衰する。
     if(player.grabbed){
+      // 淫乱度は「拘束された瞬間」ではなく、拘束されている時間で上昇。
+      // 1秒につき+1%。短時間で脱出できればほとんど増えない。
+      player.lust=Math.min(player.maxLust,player.lust+dt);
+
       player.sanity=Math.max(0,player.sanity-player.grabSanityDrain*(player.grabEnemy?.levelAttackMult ?? 1)*dt);
 
       const sanityRatio=player.maxSanity>0 ? player.sanity/player.maxSanity : 0;
@@ -2605,7 +2608,7 @@
     killTxt.textContent=player.kills;
     waveTxt.textContent=wave;
     if(enemyTxt) enemyTxt.textContent=enemies.length;
-    if(lustTxt) lustTxt.textContent=`${Math.round(player.lust)}%`; // 1%単位表示
+    if(lustTxt) lustTxt.textContent=`${Math.floor(player.lust)}%`; // 拘束1秒ごとに表示上も+1%
     if(weaponTxt){
       weaponTxt.textContent = player.activeWeapon==='pierce' ? `ロッド Lv${player.weaponPierceLevel}`
         : player.activeWeapon==='spread' ? `ワンド Lv${player.weaponSpreadLevel}`
